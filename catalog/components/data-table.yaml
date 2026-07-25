@@ -1,0 +1,54 @@
+name: data-table
+description: Sortable, filterable data table with pagination and search for displaying record collections
+tier: prototype
+parameters:
+  fields:
+    - name: columns
+      type: text
+      required: true
+    - name: rows
+      type: text
+      required: true
+    - name: pageSize
+      type: number
+      required: false
+    - name: sortable
+      type: boolean
+      required: false
+    - name: searchable
+      type: boolean
+      required: false
+    - name: onRowClick
+      type: text
+      required: false
+  submitLabel:
+    en: Apply
+    es: Aplicar
+    fr: Appliquer
+  cancelLabel:
+    en: Reset
+    es: Restablecer
+    fr: Réinitialiser
+behavior:
+  notificationModes:
+    - toast
+    - statusBar
+  audio:
+    errorBell: false
+    successChime: true
+  voiceHelp: false
+  autoFocus: false
+  confirmBeforeCancel: false
+scripts:
+  - audio-feedback.js
+  - voice-help.js
+  - notification-handler.js
+cssClasses:
+  form: sure-table
+  field: sure-table__cell
+  input: sure-table__input
+  error: sure-table__error
+  help: sure-table__help
+  label: sure-table__header
+example:
+  usage: Generate a sortable patient list table with columns for name, DOB, last visit, status, and assigned provider

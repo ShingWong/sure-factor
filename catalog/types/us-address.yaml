@@ -1,0 +1,54 @@
+name: us-address
+description: US street address
+match:
+  sql: column_name LIKE '%address%' OR column_name LIKE '%street%'
+  maxLength: 200
+validation:
+  regex: null
+  maxLength: 200
+  lookup: null
+sanitize:
+  input:
+    - trim
+    - collapseWhitespace
+    - normalize: NFKC
+    - stripControl
+    - slice(0, 200)
+  output:
+    - htmlEscape
+hints:
+  en:
+    placeholder: '123 Main St, Springfield, IL 62701'
+    help: Street address, city, state, and ZIP code
+    error:
+      format: Must be a valid address
+      required: Address is required
+  es:
+    placeholder: 'Calle Principal 123, Springfield, IL 62701'
+    help: Dirección completa incluyendo ciudad, estado y código postal
+    error:
+      format: Debe ser una dirección válida
+      required: Dirección es obligatoria
+  fr:
+    placeholder: '123 Rue Principale, Springfield, IL 62701'
+    help: Adresse complète incluant ville, état et code postal
+    error:
+      format: Doit être une adresse valide
+      required: Adresse requise
+tiers:
+  vibe:
+    validation: { regex: null, maxLength: 200 }
+    sanitize: [trim, collapseWhitespace, slice(0, 200)]
+    hints: { en: { placeholder: '123 Main St, Springfield, IL 62701' } }
+  prototype:
+    validation: { regex: null, maxLength: 200 }
+    sanitize: [trim, collapseWhitespace, normalize: NFKC, stripControl, slice(0, 200)]
+    hints: { en: { placeholder: '123 Main St, Springfield, IL 62701', help: 'Street address, city, state, ZIP' }, es: { placeholder: 'Calle Principal 123, Springfield, IL 62701', help: 'Dirección completa' } }
+  production:
+    validation: { regex: null, maxLength: 200, lookup: null }
+    sanitize: [trim, collapseWhitespace, normalize: NFKC, stripControl, slice(0, 200)]
+    hints: { en: { placeholder: '123 Main St, Springfield, IL 62701', help: 'Street address, city, state, ZIP' }, es: { placeholder: 'Calle Principal 123, Springfield, IL 62701', help: 'Dirección completa' }, fr: { placeholder: '123 Rue Principale, Springfield, IL 62701', help: 'Adresse complète' } }
+security:
+  encrypt: false
+  notes:
+    - 'Consider USPS address verification API for production tier'

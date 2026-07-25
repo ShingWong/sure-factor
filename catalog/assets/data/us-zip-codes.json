@@ -1,0 +1,22 @@
+[
+  { "code": "90210", "city": "Beverly Hills", "state": "CA" },
+  { "code": "10001", "city": "New York", "state": "NY" },
+  { "code": "60601", "city": "Chicago", "state": "IL" },
+  { "code": "77001", "city": "Houston", "state": "TX" },
+  { "code": "33101", "city": "Miami", "state": "FL" },
+  { "code": "98101", "city": "Seattle", "state": "WA" },
+  { "code": "02101", "city": "Boston", "state": "MA" },
+  { "code": "20001", "city": "Washington", "state": "DC" },
+  { "code": "75201", "city": "Dallas", "state": "TX" },
+  { "code": "30301", "city": "Atlanta", "state": "GA" },
+  { "code": "94101", "city": "San Francisco", "state": "CA" },
+  { "code": "90001", "city": "Los Angeles", "state": "CA" },
+  { "code": "85001", "city": "Phoenix", "state": "AZ" },
+  { "code": "19101", "city": "Philadelphia", "state": "PA" },
+  { "code": "48201", "city": "Detroit", "state": "MI" },
+  { "code": "55401", "city": "Minneapolis", "state": "MN" },
+  { "code": "63101", "city": "St. Louis", "state": "MO" },
+  { "code": "80201", "city": "Denver", "state": "CO" },
+  { "code": "97201", "city": "Portland", "state": "OR" },
+  { "code": "21201", "city": "Baltimore", "state": "MD" }
+]

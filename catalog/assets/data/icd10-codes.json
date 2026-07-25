@@ -1,0 +1,22 @@
+[
+  { "code": "J45.901", "description": "Asthma" },
+  { "code": "I10", "description": "Hypertension" },
+  { "code": "E11.9", "description": "Type 2 diabetes" },
+  { "code": "F32.9", "description": "Major depression" },
+  { "code": "M54.5", "description": "Low back pain" },
+  { "code": "J06.9", "description": "Upper respiratory infection" },
+  { "code": "N39.0", "description": "UTI" },
+  { "code": "E78.5", "description": "Hyperlipidemia" },
+  { "code": "Z23", "description": "Immunization" },
+  { "code": "R51", "description": "Headache" },
+  { "code": "K21.9", "description": "GERD" },
+  { "code": "J44.9", "description": "COPD" },
+  { "code": "G47.00", "description": "Insomnia" },
+  { "code": "M25.50", "description": "Joint pain" },
+  { "code": "R10.9", "description": "Abdominal pain" },
+  { "code": "L20.9", "description": "Atopic dermatitis" },
+  { "code": "H52.101", "description": "Myopia" },
+  { "code": "Z00.00", "description": "Wellness exam" },
+  { "code": "F41.1", "description": "Generalized anxiety" },
+  { "code": "M17.9", "description": "Osteoarthritis of knee" }
+]

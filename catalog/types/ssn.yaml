@@ -1,0 +1,56 @@
+name: ssn
+description: US Social Security Number
+match:
+  sql: column_name LIKE '%ssn%' OR column_name LIKE '%social%'
+  regex: ^\d{3}-\d{2}-\d{4}$
+  maxLength: 11
+validation:
+  regex: ^\d{3}-\d{2}-\d{4}$
+  maxLength: 11
+  lookup: null
+sanitize:
+  input:
+    - trim
+    - stripNonDigits
+    - formatAsSSN
+  output:
+    - maskLast4
+hints:
+  en:
+    placeholder: '***-**-1234'
+    help: Social Security Number (last 4 digits only will be visible)
+    error:
+      format: Must be 9 digits in format XXX-XX-XXXX
+      required: SSN is required
+  es:
+    placeholder: '***-**-1234'
+    help: Número de Seguro Social (solo los últimos 4 dígitos serán visibles)
+    error:
+      format: Debe tener 9 dígitos en formato XXX-XX-XXXX
+      required: SSN es obligatorio
+  fr:
+    placeholder: '***-**-1234'
+    help: Numéro de sécurité sociale (seuls les 4 derniers chiffres seront visibles)
+    error:
+      format: Doit contenir 9 chiffres au format XXX-XX-XXXX
+      required: Numéro de sécurité sociale requis
+tiers:
+  vibe:
+    validation: { regex: ^\d{3}-\d{2}-\d{4}$ }
+    sanitize: [trim, stripNonDigits]
+    hints: { en: { placeholder: '***-**-1234' } }
+  prototype:
+    validation: { regex: ^\d{3}-\d{2}-\d{4}$, maxLength: 11 }
+    sanitize: [trim, stripNonDigits, formatAsSSN]
+    hints: { en: { placeholder: '***-**-1234', help: 'SSN (last 4 visible)' }, es: { placeholder: '***-**-1234', help: 'SSN (últimos 4 visibles)' } }
+  production:
+    validation: { regex: ^\d{3}-\d{2}-\d{4}$, maxLength: 11, lookup: null }
+    sanitize: [trim, stripNonDigits, formatAsSSN]
+    hints: { en: { placeholder: '***-**-1234', help: 'SSN (last 4 visible)' }, es: { placeholder: '***-**-1234', help: 'SSN (últimos 4 visibles)' }, fr: { placeholder: '***-**-1234', help: 'SSN (4 derniers visibles)' } }
+security:
+  encrypt: true
+  notes:
+    - 'PHI — encrypt at rest'
+    - 'Mask all but last 4 digits in UI'
+    - 'Audit log all SSN access'
+    - 'Never log full SSN'

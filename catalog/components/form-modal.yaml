@@ -1,0 +1,51 @@
+name: form-modal
+description: Modal dialog containing a form for focused data entry without navigating away from the current view
+tier: prototype
+parameters:
+  fields:
+    - name: title
+      type: text
+      required: true
+    - name: fields
+      type: text
+      required: true
+    - name: submitLabel
+      type: text
+      required: false
+    - name: cancelLabel
+      type: text
+      required: false
+    - name: width
+      type: text
+      required: false
+  submitLabel:
+    en: Save
+    es: Guardar
+    fr: Enregistrer
+  cancelLabel:
+    en: Cancel
+    es: Cancelar
+    fr: Annuler
+behavior:
+  notificationModes:
+    - inline
+    - toast
+  audio:
+    errorBell: true
+    successChime: true
+  voiceHelp: true
+  autoFocus: true
+  confirmBeforeCancel: true
+scripts:
+  - audio-feedback.js
+  - voice-help.js
+  - notification-handler.js
+cssClasses:
+  form: sure-modal__form
+  field: sure-modal__field
+  input: sure-modal__input
+  error: sure-modal__error
+  help: sure-modal__help
+  label: sure-modal__label
+example:
+  usage: Generate a modal dialog to add a new medication record with drug name, dosage, frequency, and prescriber fields

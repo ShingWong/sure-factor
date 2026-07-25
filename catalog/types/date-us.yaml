@@ -1,0 +1,52 @@
+name: date-us
+description: US date format (MM/DD/YYYY)
+match:
+  sql: column_name LIKE '%date%' AND data_type IN ('varchar(10)', 'varchar(12)')
+  regex: ^\d{2}/\d{2}/\d{4}$
+  maxLength: 10
+validation:
+  regex: ^\d{2}/\d{2}/\d{4}$
+  maxLength: 10
+  lookup: null
+sanitize:
+  input:
+    - trim
+    - normalize: NFKC
+    - slice(0, 10)
+  output:
+    - htmlEscape
+hints:
+  en:
+    placeholder: '07/24/2026'
+    help: Date in MM/DD/YYYY format
+    error:
+      format: Must be a valid date in MM/DD/YYYY format
+      required: Date is required
+  es:
+    placeholder: '07/24/2026'
+    help: Fecha en formato MM/DD/AAAA
+    error:
+      format: Debe ser una fecha válida en formato MM/DD/AAAA
+      required: Fecha es obligatoria
+  fr:
+    placeholder: '07/24/2026'
+    help: Date au format MM/JJ/AAAA
+    error:
+      format: Doit être une date valide au format MM/JJ/AAAA
+      required: Date requise
+tiers:
+  vibe:
+    validation: { regex: ^\d{2}/\d{2}/\d{4}$ }
+    sanitize: [trim, slice(0, 10)]
+    hints: { en: { placeholder: '07/24/2026' } }
+  prototype:
+    validation: { regex: ^\d{2}/\d{2}/\d{4}$, maxLength: 10 }
+    sanitize: [trim, normalize: NFKC, slice(0, 10)]
+    hints: { en: { placeholder: '07/24/2026', help: 'Date in MM/DD/YYYY' }, es: { placeholder: '07/24/2026', help: 'Fecha en MM/DD/AAAA' } }
+  production:
+    validation: { regex: ^\d{2}/\d{2}/\d{4}$, maxLength: 10, lookup: null }
+    sanitize: [trim, normalize: NFKC, slice(0, 10)]
+    hints: { en: { placeholder: '07/24/2026', help: 'Date in MM/DD/YYYY' }, es: { placeholder: '07/24/2026', help: 'Fecha en MM/DD/AAAA' }, fr: { placeholder: '07/24/2026', help: 'Date au format MM/JJ/AAAA' } }
+security:
+  encrypt: false
+  notes: []

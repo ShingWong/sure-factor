@@ -1,0 +1,56 @@
+name: email
+description: Email address conforming to RFC 5322
+match:
+  sql: column_name LIKE '%email%' OR column_name LIKE '%mail%'
+  regex: ^[^@]+@[^@]+\.[^@]+$
+  maxLength: 254
+validation:
+  regex: ^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$
+  maxLength: 254
+  lookup: null
+sanitize:
+  input:
+    - trim
+    - lowercase
+    - normalize: NFKC
+    - stripControl
+    - slice(0, 254)
+  output:
+    - htmlEscape
+hints:
+  en:
+    placeholder: 'user@example.com'
+    help: Email address
+    error:
+      format: Invalid email address
+      required: Email is required
+  es:
+    placeholder: 'usuario@ejemplo.com'
+    help: Dirección de correo electrónico
+    error:
+      format: Dirección de correo electrónico inválida
+      required: Correo electrónico es obligatorio
+  fr:
+    placeholder: 'utilisateur@exemple.com'
+    help: Adresse e-mail
+    error:
+      format: Adresse e-mail invalide
+      required: E-mail requis
+tiers:
+  vibe:
+    validation: { regex: ^[^@]+@[^@]+\.[^@]+$, maxLength: null }
+    sanitize: [trim, lowercase]
+    hints: { en: { placeholder: 'user@example.com' } }
+  prototype:
+    validation: { regex: ^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$, maxLength: 254 }
+    sanitize: [trim, lowercase, normalize: NFKC, stripControl, slice(0, 254)]
+    hints: { en: { placeholder: 'user@example.com', help: 'Email address' }, es: { placeholder: 'usuario@ejemplo.com', help: 'Dirección de correo electrónico' } }
+  production:
+    validation: { regex: ^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$, maxLength: 254, lookup: null }
+    sanitize: [trim, lowercase, normalize: NFKC, stripControl, slice(0, 254)]
+    hints: { en: { placeholder: 'user@example.com', help: 'Email address' }, es: { placeholder: 'usuario@ejemplo.com', help: 'Dirección de correo electrónico' }, fr: { placeholder: 'utilisateur@exemple.com', help: 'Adresse e-mail' } }
+security:
+  encrypt: false
+  notes:
+    - 'Normalize Unicode NFKC to prevent homoglyph attacks'
+    - 'Lowercase to ensure case-insensitive matching'

@@ -1,0 +1,59 @@
+name: crud-resource
+description: Full CRUD interface combining a data table with create, read, update, and delete operations via form modals
+tier: prototype
+parameters:
+  fields:
+    - name: resourceName
+      type: text
+      required: true
+    - name: columns
+      type: text
+      required: true
+    - name: createFields
+      type: text
+      required: true
+    - name: editFields
+      type: text
+      required: false
+    - name: pageSize
+      type: number
+      required: false
+    - name: exportable
+      type: boolean
+      required: false
+    - name: onDelete
+      type: text
+      required: false
+  submitLabel:
+    en: Save
+    es: Guardar
+    fr: Enregistrer
+  cancelLabel:
+    en: Cancel
+    es: Cancelar
+    fr: Annuler
+behavior:
+  notificationModes:
+    - inline
+    - toast
+    - statusBar
+    - sidePanel
+  audio:
+    errorBell: true
+    successChime: true
+  voiceHelp: true
+  autoFocus: true
+  confirmBeforeCancel: true
+scripts:
+  - audio-feedback.js
+  - voice-help.js
+  - notification-handler.js
+cssClasses:
+  form: sure-crud
+  field: sure-crud__field
+  input: sure-crud__input
+  error: sure-crud__error
+  help: sure-crud__help
+  label: sure-crud__label
+example:
+  usage: Generate a full CRUD interface for managing insurance claims with columns for claim ID, patient, amount, status, and date, plus create/edit modals and CSV export

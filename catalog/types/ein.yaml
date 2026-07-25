@@ -1,0 +1,54 @@
+name: ein
+description: Employer Identification Number
+match:
+  sql: column_name LIKE '%ein%' OR column_name LIKE '%employer_id%'
+  regex: ^\d{2}-\d{7}$
+  maxLength: 10
+validation:
+  regex: ^\d{2}-\d{7}$
+  maxLength: 10
+  lookup: null
+sanitize:
+  input:
+    - trim
+    - stripNonDigits
+    - formatAsEIN
+  output:
+    - htmlEscape
+hints:
+  en:
+    placeholder: '12-3456789'
+    help: Employer Identification Number (XX-XXXXXXX)
+    error:
+      format: Must be 9 digits in format XX-XXXXXXX
+      required: EIN is required
+  es:
+    placeholder: '12-3456789'
+    help: Número de Identificación del Empleador (XX-XXXXXXX)
+    error:
+      format: Debe tener 9 dígitos en formato XX-XXXXXXX
+      required: EIN es obligatorio
+  fr:
+    placeholder: '12-3456789'
+    help: Numéro d identification de l employeur (XX-XXXXXXX)
+    error:
+      format: Doit contenir 9 chiffres au format XX-XXXXXXX
+      required: Numéro d identification requis
+tiers:
+  vibe:
+    validation: { regex: ^\d{2}-\d{7}$ }
+    sanitize: [trim, stripNonDigits, slice(0, 10)]
+    hints: { en: { placeholder: '12-3456789' } }
+  prototype:
+    validation: { regex: ^\d{2}-\d{7}$, maxLength: 10 }
+    sanitize: [trim, stripNonDigits, formatAsEIN]
+    hints: { en: { placeholder: '12-3456789', help: 'EIN (XX-XXXXXXX)' }, es: { placeholder: '12-3456789', help: 'EIN (XX-XXXXXXX)' } }
+  production:
+    validation: { regex: ^\d{2}-\d{7}$, maxLength: 10, lookup: null }
+    sanitize: [trim, stripNonDigits, formatAsEIN]
+    hints: { en: { placeholder: '12-3456789', help: 'EIN (XX-XXXXXXX)' }, es: { placeholder: '12-3456789', help: 'EIN (XX-XXXXXXX)' }, fr: { placeholder: '12-3456789', help: 'EIN (XX-XXXXXXX)' } }
+security:
+  encrypt: true
+  notes:
+    - 'Treat as sensitive business identifier'
+    - 'Encrypt at rest'

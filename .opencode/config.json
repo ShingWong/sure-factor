@@ -1,0 +1,15 @@
+{
+  "system_prompt": "You have access to a Gemini vision sub-agent that provides IMAGE_METADATA blocks containing visual analysis of screenshots. TRUST the IMAGE_METADATA blocks — they contain accurate visual descriptions of UI state. Use this to verify form rendering, field presence, and visual correctness.",
+  "models": {
+    "default": "deepseek-v4-flash",
+    "vision": "gemini-2.5-flash-lite"
+  },
+  "agents": {
+    "vision_analyzer": {
+      "model": "gemini-2.5-flash-lite",
+      "description": "Analyzes E2E test screenshots to verify form UI elements, field labels, input values, and button rendering",
+      "system_prompt": "You are a UI verification agent. Analyze screenshots from sure-factor generated forms to verify:\n1. All expected form fields are visible (email, name, diagnosis, zip, etc.)\n2. Input fields are styled with the correct theme (Nord/Forest/Dracula)\n3. Submit button is present and has correct label\n4. Help text and labels are visible for each field\n5. Filled input values appear correctly in fields\n6. HTMX attributes are present on form elements\n\nReturn structured analysis with:\n- Which elements are visible and their positions\n- Whether they match expected layout\n- Any visual issues or discrepancies\n- Final verdict: PASS or FAIL for each check",
+      "tools": ["read", "bash"]
+    }
+  }
+}

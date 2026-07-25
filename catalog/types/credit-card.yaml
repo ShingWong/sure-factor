@@ -1,0 +1,55 @@
+name: credit-card
+description: Credit card number (stored as masked last 4 digits only)
+match:
+  sql: column_name LIKE '%cc%' OR column_name LIKE '%card%' OR column_name LIKE '%credit%'
+  regex: ^\d{13,19}$
+  maxLength: 19
+validation:
+  regex: ^\d{13,19}$
+  maxLength: 19
+  lookup: null
+sanitize:
+  input:
+    - stripNonDigits
+    - luhnCheck
+    - trimToLast4
+  output:
+    - maskLast4
+hints:
+  en:
+    placeholder: '•••• •••• •••• 4242'
+    help: Credit card number (we only store the last 4 digits)
+    error:
+      format: Must be a valid credit card number
+      required: Card number is required
+  es:
+    placeholder: '•••• •••• •••• 4242'
+    help: Número de tarjeta de crédito (solo almacenamos los últimos 4 dígitos)
+    error:
+      format: Debe ser un número de tarjeta de crédito válido
+      required: Número de tarjeta es obligatorio
+  fr:
+    placeholder: '•••• •••• •••• 4242'
+    help: Numéro de carte de crédit (nous ne stockons que les 4 derniers chiffres)
+    error:
+      format: Doit être un numéro de carte de crédit valide
+      required: Numéro de carte requis
+tiers:
+  vibe:
+    validation: { regex: ^\d{13,19}$ }
+    sanitize: [stripNonDigits, trimToLast4]
+    hints: { en: { placeholder: '4242' } }
+  prototype:
+    validation: { regex: ^\d{13,19}$, maxLength: 19 }
+    sanitize: [stripNonDigits, luhnCheck, trimToLast4]
+    hints: { en: { placeholder: '4242', help: 'We only store the last 4 digits' }, es: { placeholder: '4242', help: 'Solo almacenamos los últimos 4 dígitos' } }
+  production:
+    validation: { regex: ^\d{13,19}$, maxLength: 19, lookup: null }
+    sanitize: [stripNonDigits, luhnCheck, trimToLast4]
+    hints: { en: { placeholder: '4242', help: 'We only store the last 4 digits' }, es: { placeholder: '4242', help: 'Solo almacenamos los últimos 4 dígitos' }, fr: { placeholder: '4242', help: 'Nous ne stockons que les 4 derniers chiffres' } }
+security:
+  encrypt: true
+  notes:
+    - 'NEVER store full credit card number — only last 4 digits'
+    - 'PCI-DSS compliant storage required'
+    - 'Never log the card number at any stage'

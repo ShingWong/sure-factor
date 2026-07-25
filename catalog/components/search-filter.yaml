@@ -1,0 +1,50 @@
+name: search-filter
+description: Search bar with filter controls for incremental text search and faceted filtering of a dataset
+tier: vibe
+parameters:
+  fields:
+    - name: placeholder
+      type: text
+      required: false
+    - name: filters
+      type: text
+      required: true
+    - name: debounceMs
+      type: number
+      required: false
+    - name: onSearch
+      type: text
+      required: true
+    - name: onClear
+      type: text
+      required: false
+  submitLabel:
+    en: Search
+    es: Buscar
+    fr: Rechercher
+  cancelLabel:
+    en: Clear Filters
+    es: Limpiar Filtros
+    fr: Effacer les Filtres
+behavior:
+  notificationModes:
+    - inline
+  audio:
+    errorBell: false
+    successChime: false
+  voiceHelp: false
+  autoFocus: true
+  confirmBeforeCancel: false
+scripts:
+  - audio-feedback.js
+  - voice-help.js
+  - notification-handler.js
+cssClasses:
+  form: sure-search
+  field: sure-search__input
+  input: sure-search__input
+  error: sure-search__error
+  help: sure-search__help
+  label: sure-search__label
+example:
+  usage: Generate a search bar with dropdown filters for patient name, insurance provider, and claim status with 300ms debounce

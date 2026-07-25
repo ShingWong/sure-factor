@@ -1,0 +1,236 @@
+{
+  "types": {
+    "email": {
+      "label": "Email",
+      "placeholder": "you@example.com",
+      "help": "Enter a valid email address",
+      "error": {
+        "format": "Enter a valid email address",
+        "required": "Email is required",
+        "tooLong": "Email must be {max} characters or fewer"
+      }
+    },
+    "us-phone": {
+      "label": "Phone Number",
+      "placeholder": "(555) 123-4567",
+      "help": "Enter a 10-digit US phone number",
+      "error": {
+        "format": "Enter a valid 10-digit phone number",
+        "required": "Phone number is required",
+        "tooLong": "Phone number must be {max} characters or fewer"
+      }
+    },
+    "intl-phone": {
+      "label": "International Phone",
+      "placeholder": "+1 555 123 4567",
+      "help": "Enter phone number with country code",
+      "error": {
+        "format": "Enter a valid international phone number",
+        "required": "Phone number is required",
+        "tooLong": "Phone number must be {max} characters or fewer"
+      }
+    },
+    "zip5": {
+      "label": "ZIP Code",
+      "placeholder": "12345",
+      "help": "Enter a 5-digit ZIP code",
+      "error": {
+        "format": "Enter a valid 5-digit ZIP code",
+        "required": "ZIP code is required",
+        "tooLong": "ZIP code must be {max} characters or fewer"
+      }
+    },
+    "zip9": {
+      "label": "ZIP+4 Code",
+      "placeholder": "12345-6789",
+      "help": "Enter a 9-digit ZIP+4 code",
+      "error": {
+        "format": "Enter a valid ZIP+4 code (12345-6789)",
+        "required": "ZIP+4 code is required",
+        "tooLong": "ZIP+4 code must be {max} characters or fewer"
+      }
+    },
+    "icd10": {
+      "label": "ICD-10 Code",
+      "placeholder": "J45.901",
+      "help": "Enter a valid ICD-10 diagnosis code",
+      "error": {
+        "format": "Enter a valid ICD-10 code",
+        "required": "ICD-10 code is required",
+        "tooLong": "ICD-10 code must be {max} characters or fewer"
+      }
+    },
+    "credit-card": {
+      "label": "Credit Card Number",
+      "placeholder": "4111 1111 1111 1111",
+      "help": "Enter a valid credit card number",
+      "error": {
+        "format": "Enter a valid credit card number",
+        "required": "Credit card number is required",
+        "tooLong": "Credit card number must be {max} characters or fewer"
+      }
+    },
+    "ssn": {
+      "label": "Social Security Number",
+      "placeholder": "123-45-6789",
+      "help": "Enter a valid SSN",
+      "error": {
+        "format": "Enter a valid SSN (XXX-XX-XXXX)",
+        "required": "SSN is required",
+        "tooLong": "SSN must be {max} characters or fewer"
+      }
+    },
+    "ein": {
+      "label": "Employer ID Number",
+      "placeholder": "12-3456789",
+      "help": "Enter a valid EIN",
+      "error": {
+        "format": "Enter a valid EIN (XX-XXXXXXX)",
+        "required": "EIN is required",
+        "tooLong": "EIN must be {max} characters or fewer"
+      }
+    },
+    "url": {
+      "label": "Website URL",
+      "placeholder": "https://example.com",
+      "help": "Enter a valid URL including http:// or https://",
+      "error": {
+        "format": "Enter a valid URL",
+        "required": "URL is required",
+        "tooLong": "URL must be {max} characters or fewer"
+      }
+    },
+    "date-iso": {
+      "label": "Date",
+      "placeholder": "2025-01-15",
+      "help": "Enter a date in YYYY-MM-DD format",
+      "error": {
+        "format": "Enter a valid date in YYYY-MM-DD format",
+        "required": "Date is required",
+        "tooLong": "Date must be {max} characters or fewer"
+      }
+    },
+    "date-us": {
+      "label": "Date",
+      "placeholder": "01/15/2025",
+      "help": "Enter a date in MM/DD/YYYY format",
+      "error": {
+        "format": "Enter a valid date in MM/DD/YYYY format",
+        "required": "Date is required",
+        "tooLong": "Date must be {max} characters or fewer"
+      }
+    },
+    "full-name": {
+      "label": "Full Name",
+      "placeholder": "John Doe",
+      "help": "Enter your full legal name",
+      "error": {
+        "format": "Enter a valid name",
+        "required": "Full name is required",
+        "tooLong": "Name must be {max} characters or fewer"
+      }
+    },
+    "us-address": {
+      "label": "Street Address",
+      "placeholder": "123 Main St",
+      "help": "Enter your street address",
+      "error": {
+        "format": "Enter a valid street address",
+        "required": "Street address is required",
+        "tooLong": "Address must be {max} characters or fewer"
+      }
+    },
+    "password": {
+      "label": "Password",
+      "placeholder": "Enter your password",
+      "help": "Must be at least 8 characters with a number and special character",
+      "error": {
+        "format": "Password must be at least 8 characters with a number and special character",
+        "required": "Password is required",
+        "tooLong": "Password must be {max} characters or fewer"
+      }
+    }
+  },
+  "components": {
+    "form": {
+      "title": "Form",
+      "submitLabel": "Submit",
+      "cancelLabel": "Cancel",
+      "deleteConfirm": "Are you sure you want to delete this record?",
+      "searchPlaceholder": "Search...",
+      "noResults": "No results found",
+      "exportLabel": "Export",
+      "filterLabel": "Filters",
+      "clearFilters": "Clear filters",
+      "prevPage": "Previous",
+      "nextPage": "Next"
+    },
+    "form-modal": {
+      "title": "Form",
+      "submitLabel": "Save",
+      "cancelLabel": "Cancel",
+      "deleteConfirm": "Are you sure you want to delete this record?",
+      "searchPlaceholder": "Search...",
+      "noResults": "No results found",
+      "exportLabel": "Export",
+      "filterLabel": "Filters",
+      "clearFilters": "Clear filters",
+      "prevPage": "Previous",
+      "nextPage": "Next"
+    },
+    "data-table": {
+      "title": "Data",
+      "submitLabel": "Save",
+      "cancelLabel": "Cancel",
+      "deleteConfirm": "Are you sure you want to delete this record?",
+      "searchPlaceholder": "Search records...",
+      "noResults": "No records found",
+      "exportLabel": "Export CSV",
+      "filterLabel": "Filters",
+      "clearFilters": "Clear filters",
+      "prevPage": "Previous page",
+      "nextPage": "Next page"
+    },
+    "crud-resource": {
+      "title": "Manage",
+      "submitLabel": "Save",
+      "cancelLabel": "Cancel",
+      "deleteConfirm": "Are you sure you want to delete this {resource}? This action cannot be undone.",
+      "searchPlaceholder": "Search {resource}...",
+      "noResults": "No {resource} found",
+      "exportLabel": "Export",
+      "filterLabel": "Filters",
+      "clearFilters": "Clear filters",
+      "prevPage": "Previous",
+      "nextPage": "Next"
+    },
+    "search-filter": {
+      "title": "Search",
+      "submitLabel": "Apply",
+      "cancelLabel": "Reset",
+      "deleteConfirm": "Are you sure?",
+      "searchPlaceholder": "Search...",
+      "noResults": "No matching results",
+      "exportLabel": "Export",
+      "filterLabel": "Advanced filters",
+      "clearFilters": "Clear all",
+      "prevPage": "Previous",
+      "nextPage": "Next"
+    }
+  },
+  "validation": {
+    "required": "This field is required",
+    "tooLong": "Must be {max} characters or fewer",
+    "invalid": "Invalid value"
+  },
+  "notification": {
+    "inline": "Please fix the errors below",
+    "toast": {
+      "title": "Validation Error"
+    },
+    "statusBar": "{count} error(s) need attention",
+    "sidePanel": {
+      "title": "Errors"
+    }
+  }
+}

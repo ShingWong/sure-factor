@@ -1,0 +1,56 @@
+name: url
+description: URL or website address
+match:
+  sql: column_name LIKE '%url%' OR column_name LIKE '%website%' OR column_name LIKE '%link%'
+  regex: ^https?://
+  maxLength: 2048
+validation:
+  regex: ^https?://[^\s/$.?#].[^\s]*$
+  maxLength: 2048
+  lookup: null
+sanitize:
+  input:
+    - trim
+    - lowercase
+    - stripJavaScriptProtocol
+    - normalize: NFKC
+    - slice(0, 2048)
+  output:
+    - htmlEscape
+hints:
+  en:
+    placeholder: 'https://example.com'
+    help: Full URL including https://
+    error:
+      format: Must be a valid URL starting with http:// or https://
+      required: URL is required
+  es:
+    placeholder: 'https://ejemplo.com'
+    help: URL completa incluyendo https://
+    error:
+      format: Debe ser una URL válida comenzando con http:// o https://
+      required: URL es obligatoria
+  fr:
+    placeholder: 'https://exemple.fr'
+    help: URL complète incluant https://
+    error:
+      format: Doit être une URL valide commençant par http:// ou https://
+      required: URL requise
+tiers:
+  vibe:
+    validation: { regex: ^https?://[^\s/$.?#].[^\s]*$ }
+    sanitize: [trim, lowercase, slice(0, 2048)]
+    hints: { en: { placeholder: 'https://example.com' } }
+  prototype:
+    validation: { regex: ^https?://[^\s/$.?#].[^\s]*$, maxLength: 2048 }
+    sanitize: [trim, lowercase, stripJavaScriptProtocol, normalize: NFKC, slice(0, 2048)]
+    hints: { en: { placeholder: 'https://example.com', help: 'Full URL including https://' }, es: { placeholder: 'https://ejemplo.com', help: 'URL completa con https://' } }
+  production:
+    validation: { regex: ^https?://[^\s/$.?#].[^\s]*$, maxLength: 2048, lookup: null }
+    sanitize: [trim, lowercase, stripJavaScriptProtocol, normalize: NFKC, slice(0, 2048)]
+    hints: { en: { placeholder: 'https://example.com', help: 'Full URL including https://' }, es: { placeholder: 'https://ejemplo.com', help: 'URL completa con https://' }, fr: { placeholder: 'https://exemple.fr', help: 'URL complète avec https://' } }
+security:
+  encrypt: false
+  notes:
+    - 'Strip javascript: protocol to prevent XSS'
+    - 'Validate URL resolves if production tier'

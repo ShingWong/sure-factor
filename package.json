@@ -1,0 +1,77 @@
+{
+  "name": "sure-factor",
+  "version": "0.1.0",
+  "description": "Database schema to production-grade UI — type catalog, validation, sanitization, i18n, audio, and tiered code generation.",
+  "license": "MIT",
+  "author": "ShingWong",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ShingWong/sure-factor"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./introspect": {
+      "types": "./dist/introspect.d.ts",
+      "import": "./dist/introspect.js"
+    },
+    "./generate": {
+      "types": "./dist/generate.d.ts",
+      "import": "./dist/generate.js"
+    },
+    "./generate-store": {
+      "types": "./dist/generate-store.d.ts",
+      "import": "./dist/generate-store.js"
+    },
+    "./sanitize": {
+      "types": "./dist/sanitize.d.ts",
+      "import": "./dist/sanitize.js"
+    },
+    "./serialize": {
+      "types": "./dist/serialize.d.ts",
+      "import": "./dist/serialize.js"
+    },
+    "./format": {
+      "types": "./dist/format.d.ts",
+      "import": "./dist/format.js"
+    }
+  },
+  "files": [
+    "dist",
+    "catalog",
+    "!dist/**/*.test.*"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:unit": "vitest run --exclude='src/e2e.test.ts'",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "playwright": "^1.62.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  },
+  "keywords": [
+    "code-generation",
+    "validation",
+    "sanitization",
+    "htmx",
+    "forms",
+    "catalog",
+    "database-schema"
+  ],
+  "dependencies": {
+    "prettier": "^3.9.6"
+  }
+}

@@ -1,0 +1,236 @@
+{
+  "types": {
+    "email": {
+      "label": "Adresse Email",
+      "placeholder": "vous@exemple.com",
+      "help": "Saisissez une adresse email valide",
+      "error": {
+        "format": "Saisissez une adresse email valide",
+        "required": "L'email est obligatoire",
+        "tooLong": "L'email doit faire {max} caractères ou moins"
+      }
+    },
+    "us-phone": {
+      "label": "Numéro de Téléphone",
+      "placeholder": "(555) 123-4567",
+      "help": "Saisissez un numéro de téléphone à 10 chiffres",
+      "error": {
+        "format": "Saisissez un numéro de téléphone valide à 10 chiffres",
+        "required": "Le numéro de téléphone est obligatoire",
+        "tooLong": "Le téléphone doit faire {max} caractères ou moins"
+      }
+    },
+    "intl-phone": {
+      "label": "Téléphone International",
+      "placeholder": "+1 555 123 4567",
+      "help": "Saisissez le numéro avec l'indicatif du pays",
+      "error": {
+        "format": "Saisissez un numéro international valide",
+        "required": "Le numéro de téléphone est obligatoire",
+        "tooLong": "Le téléphone doit faire {max} caractères ou moins"
+      }
+    },
+    "zip5": {
+      "label": "Code Postal",
+      "placeholder": "12345",
+      "help": "Saisissez un code postal à 5 chiffres",
+      "error": {
+        "format": "Saisissez un code postal valide à 5 chiffres",
+        "required": "Le code postal est obligatoire",
+        "tooLong": "Le code postal doit faire {max} caractères ou moins"
+      }
+    },
+    "zip9": {
+      "label": "Code Postal+4",
+      "placeholder": "12345-6789",
+      "help": "Saisissez un code postal à 9 chiffres",
+      "error": {
+        "format": "Saisissez un code ZIP+4 valide (12345-6789)",
+        "required": "Le code ZIP+4 est obligatoire",
+        "tooLong": "Le code ZIP+4 doit faire {max} caractères ou moins"
+      }
+    },
+    "icd10": {
+      "label": "Code ICD-10",
+      "placeholder": "J45.901",
+      "help": "Saisissez un code de diagnostic ICD-10 valide",
+      "error": {
+        "format": "Saisissez un code ICD-10 valide",
+        "required": "Le code ICD-10 est obligatoire",
+        "tooLong": "Le code ICD-10 doit faire {max} caractères ou moins"
+      }
+    },
+    "credit-card": {
+      "label": "Numéro de Carte Bancaire",
+      "placeholder": "4111 1111 1111 1111",
+      "help": "Saisissez un numéro de carte bancaire valide",
+      "error": {
+        "format": "Saisissez un numéro de carte valide",
+        "required": "Le numéro de carte est obligatoire",
+        "tooLong": "Le numéro de carte doit faire {max} caractères ou moins"
+      }
+    },
+    "ssn": {
+      "label": "Numéro de Sécurité Sociale",
+      "placeholder": "123-45-6789",
+      "help": "Saisissez un SSN valide",
+      "error": {
+        "format": "Saisissez un SSN valide (XXX-XX-XXXX)",
+        "required": "Le SSN est obligatoire",
+        "tooLong": "Le SSN doit faire {max} caractères ou moins"
+      }
+    },
+    "ein": {
+      "label": "Numéro d'Identification Employeur",
+      "placeholder": "12-3456789",
+      "help": "Saisissez un EIN valide",
+      "error": {
+        "format": "Saisissez un EIN valide (XX-XXXXXXX)",
+        "required": "L'EIN est obligatoire",
+        "tooLong": "L'EIN doit faire {max} caractères ou moins"
+      }
+    },
+    "url": {
+      "label": "Site Web",
+      "placeholder": "https://exemple.com",
+      "help": "Saisissez une URL valide incluant http:// ou https://",
+      "error": {
+        "format": "Saisissez une URL valide",
+        "required": "L'URL est obligatoire",
+        "tooLong": "L'URL doit faire {max} caractères ou moins"
+      }
+    },
+    "date-iso": {
+      "label": "Date",
+      "placeholder": "2025-01-15",
+      "help": "Saisissez une date au format AAAA-MM-JJ",
+      "error": {
+        "format": "Saisissez une date valide au format AAAA-MM-JJ",
+        "required": "La date est obligatoire",
+        "tooLong": "La date doit faire {max} caractères ou moins"
+      }
+    },
+    "date-us": {
+      "label": "Date",
+      "placeholder": "01/15/2025",
+      "help": "Saisissez une date au format MM/JJ/AAAA",
+      "error": {
+        "format": "Saisissez une date valide au format MM/JJ/AAAA",
+        "required": "La date est obligatoire",
+        "tooLong": "La date doit faire {max} caractères ou moins"
+      }
+    },
+    "full-name": {
+      "label": "Nom Complet",
+      "placeholder": "Jean Dupont",
+      "help": "Saisissez votre nom complet",
+      "error": {
+        "format": "Saisissez un nom valide",
+        "required": "Le nom complet est obligatoire",
+        "tooLong": "Le nom doit faire {max} caractères ou moins"
+      }
+    },
+    "us-address": {
+      "label": "Adresse",
+      "placeholder": "123 Rue Principale",
+      "help": "Saisissez votre adresse",
+      "error": {
+        "format": "Saisissez une adresse valide",
+        "required": "L'adresse est obligatoire",
+        "tooLong": "L'adresse doit faire {max} caractères ou moins"
+      }
+    },
+    "password": {
+      "label": "Mot de Passe",
+      "placeholder": "Saisissez votre mot de passe",
+      "help": "Doit contenir au moins 8 caractères, un chiffre et un caractère spécial",
+      "error": {
+        "format": "Le mot de passe doit contenir au moins 8 caractères, un chiffre et un caractère spécial",
+        "required": "Le mot de passe est obligatoire",
+        "tooLong": "Le mot de passe doit faire {max} caractères ou moins"
+      }
+    }
+  },
+  "components": {
+    "form": {
+      "title": "Formulaire",
+      "submitLabel": "Envoyer",
+      "cancelLabel": "Annuler",
+      "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cet enregistrement ?",
+      "searchPlaceholder": "Rechercher...",
+      "noResults": "Aucun résultat",
+      "exportLabel": "Exporter",
+      "filterLabel": "Filtres",
+      "clearFilters": "Effacer les filtres",
+      "prevPage": "Précédent",
+      "nextPage": "Suivant"
+    },
+    "form-modal": {
+      "title": "Formulaire",
+      "submitLabel": "Enregistrer",
+      "cancelLabel": "Annuler",
+      "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cet enregistrement ?",
+      "searchPlaceholder": "Rechercher...",
+      "noResults": "Aucun résultat",
+      "exportLabel": "Exporter",
+      "filterLabel": "Filtres",
+      "clearFilters": "Effacer les filtres",
+      "prevPage": "Précédent",
+      "nextPage": "Suivant"
+    },
+    "data-table": {
+      "title": "Données",
+      "submitLabel": "Enregistrer",
+      "cancelLabel": "Annuler",
+      "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cet enregistrement ?",
+      "searchPlaceholder": "Rechercher des enregistrements...",
+      "noResults": "Aucun enregistrement",
+      "exportLabel": "Exporter CSV",
+      "filterLabel": "Filtres",
+      "clearFilters": "Effacer les filtres",
+      "prevPage": "Page précédente",
+      "nextPage": "Page suivante"
+    },
+    "crud-resource": {
+      "title": "Gérer",
+      "submitLabel": "Enregistrer",
+      "cancelLabel": "Annuler",
+      "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce {resource} ? Cette action est irréversible.",
+      "searchPlaceholder": "Rechercher {resource}...",
+      "noResults": "Aucun {resource} trouvé",
+      "exportLabel": "Exporter",
+      "filterLabel": "Filtres",
+      "clearFilters": "Effacer les filtres",
+      "prevPage": "Précédent",
+      "nextPage": "Suivant"
+    },
+    "search-filter": {
+      "title": "Recherche",
+      "submitLabel": "Appliquer",
+      "cancelLabel": "Réinitialiser",
+      "deleteConfirm": "Êtes-vous sûr ?",
+      "searchPlaceholder": "Rechercher...",
+      "noResults": "Aucun résultat correspondant",
+      "exportLabel": "Exporter",
+      "filterLabel": "Filtres avancés",
+      "clearFilters": "Tout effacer",
+      "prevPage": "Précédent",
+      "nextPage": "Suivant"
+    }
+  },
+  "validation": {
+    "required": "Ce champ est obligatoire",
+    "tooLong": "Doit faire {max} caractères ou moins",
+    "invalid": "Valeur invalide"
+  },
+  "notification": {
+    "inline": "Veuillez corriger les erreurs ci-dessous",
+    "toast": {
+      "title": "Erreur de Validation"
+    },
+    "statusBar": "{count} erreur(s) nécessitent votre attention",
+    "sidePanel": {
+      "title": "Erreurs"
+    }
+  }
+}

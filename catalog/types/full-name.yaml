@@ -1,0 +1,55 @@
+name: full-name
+description: Person full name
+match:
+  sql: column_name LIKE '%name%' OR column_name LIKE '%full_name%'
+  maxLength: 100
+validation:
+  regex: null
+  maxLength: 100
+  lookup: null
+sanitize:
+  input:
+    - trim
+    - collapseWhitespace
+    - normalize: NFKC
+    - stripControl
+    - slice(0, 100)
+  output:
+    - htmlEscape
+hints:
+  en:
+    placeholder: 'Jane Doe'
+    help: Full legal name
+    error:
+      format: Name must be 1-100 characters
+      required: Name is required
+  es:
+    placeholder: 'María García'
+    help: Nombre completo legal
+    error:
+      format: El nombre debe tener entre 1 y 100 caracteres
+      required: Nombre es obligatorio
+  fr:
+    placeholder: 'Jean Dupont'
+    help: Nom légal complet
+    error:
+      format: Le nom doit contenir entre 1 et 100 caractères
+      required: Nom requis
+tiers:
+  vibe:
+    validation: { regex: null, maxLength: 100 }
+    sanitize: [trim, collapseWhitespace, slice(0, 100)]
+    hints: { en: { placeholder: 'Jane Doe' } }
+  prototype:
+    validation: { regex: null, maxLength: 100 }
+    sanitize: [trim, collapseWhitespace, normalize: NFKC, stripControl, slice(0, 100)]
+    hints: { en: { placeholder: 'Jane Doe', help: 'Full legal name' }, es: { placeholder: 'María García', help: 'Nombre completo legal' } }
+  production:
+    validation: { regex: null, maxLength: 100, lookup: null }
+    sanitize: [trim, collapseWhitespace, normalize: NFKC, stripControl, slice(0, 100)]
+    hints: { en: { placeholder: 'Jane Doe', help: 'Full legal name' }, es: { placeholder: 'María García', help: 'Nombre completo legal' }, fr: { placeholder: 'Jean Dupont', help: 'Nom légal complet' } }
+security:
+  encrypt: false
+  notes:
+    - 'NFKC normalization prevents homoglyph attacks (e.g., Cyrillic "а" vs Latin "a")'
+    - 'Strip control characters including zero-width spaces and direction overrides'

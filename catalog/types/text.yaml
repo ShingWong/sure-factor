@@ -1,0 +1,55 @@
+name: text
+description: General-purpose text field (fallback when no specific type matches)
+match:
+  sql: data_type IN ('varchar', 'text', 'character varying')
+  maxLength: null
+validation:
+  regex: null
+  maxLength: null
+  lookup: null
+sanitize:
+  input:
+    - trim
+    - collapseWhitespace
+    - normalize: NFKC
+    - stripControl
+    - slice(0, maxLength)
+  output:
+    - htmlEscape
+hints:
+  en:
+    placeholder: 'Enter text...'
+    help: ''
+    error:
+      format: ''
+      required: This field is required
+  es:
+    placeholder: 'Ingrese texto...'
+    help: ''
+    error:
+      format: ''
+      required: Este campo es obligatorio
+  fr:
+    placeholder: 'Entrez du texte...'
+    help: ''
+    error:
+      format: ''
+      required: Ce champ est requis
+tiers:
+  vibe:
+    validation: { regex: null, maxLength: null }
+    sanitize: [trim, slice(0, maxLength)]
+    hints: { en: { placeholder: 'Enter text...' } }
+  prototype:
+    validation: { regex: null, maxLength: null }
+    sanitize: [trim, collapseWhitespace, normalize: NFKC, stripControl, slice(0, maxLength)]
+    hints: { en: { placeholder: 'Enter text...' }, es: { placeholder: 'Ingrese texto...' } }
+  production:
+    validation: { regex: null, maxLength: null, lookup: null }
+    sanitize: [trim, collapseWhitespace, normalize: NFKC, stripControl, slice(0, maxLength)]
+    hints: { en: { placeholder: 'Enter text...' }, es: { placeholder: 'Ingrese texto...' }, fr: { placeholder: 'Entrez du texte...' } }
+security:
+  encrypt: false
+  notes:
+    - 'Fallback type — used when no specific type matches column name'
+    - 'Rich text fields should use a separate rich-text type with DOMPurify'
