@@ -107,7 +107,23 @@ export function parseYaml(text: string): Record<string, unknown> | null {
       const key = trimmed.slice(0, colonIdx).trim()
       const val = trimmed.slice(colonIdx + 1).trim()
 
-      if (val === '' || val === '|' || val === '>') {
+      if (val === '|' || val === '>') {
+        // Block scalar: collect indented lines below
+        const blockLines: string[] = []
+        const blockIndent = indent + 1
+        for (let j = i + 1; j < lines.length; j++) {
+          const line = lines[j]!
+          if (line.trim() === '' || line.startsWith('#')) continue
+          const lineIndent = line.length - line.trimStart().length
+          if (lineIndent < blockIndent) break
+          blockLines.push(line.trimStart())
+          i = j
+        }
+        current.obj[key] = val === '>' ? blockLines.join(' ') : blockLines.join('\n')
+        continue
+      }
+
+      if (val === '') {
         if (isNextLineArray(lines, i, indent)) {
           current.obj[key] = []
           arrayTarget = { obj: current.obj, key }

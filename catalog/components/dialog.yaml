@@ -48,7 +48,7 @@ cssClasses:
   resizeE: sure-dialog__resize--e
   resizeS: sure-dialog__resize--s
   resizeSE: sure-dialog__resize--se
-output:
+generated:
   html: |
     <div class="sure-dialog-overlay" id="{{id}}-overlay">
       <div class="sure-dialog" id="{{id}}">
@@ -62,28 +62,18 @@ output:
         <div class="sure-dialog__resize sure-dialog__resize--se"></div>
       </div>
     </div>
-  js: |
+  js: >
     function open{{Name}}(opts) {
-      openModal({
-        title: opts.title,
-        content: opts.content,
+      openModal({ title: opts.title, content: opts.content,
         width: opts.width || 480,
-        resizeEdges: (opts.resizeEdges || 'e,s,se').split(','),
-        draggable: opts.draggable !== false,
-      })
+        resizeEdges: (opts.resizeEdges || "e,s,se").split(","),
+        draggable: opts.draggable !== false })
     }
-  css: |
-    .sure-dialog-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200; display:flex; align-items:center; justify-content:center; }
-    .sure-dialog { background:var(--surface); border-radius:12px; display:flex; flex-direction:column; box-shadow:0 8px 32px rgba(0,0,0,0.2); position:relative; }
-    .sure-dialog__header { padding:1rem 1.25rem; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:grab; user-select:none; }
-    .sure-dialog__header:active { cursor:grabbing; }
-    .sure-dialog__title { font-size:1rem; font-weight:700; }
-    .sure-dialog__close { background:none; border:none; cursor:pointer; color:var(--muted); font-size:1.25rem; }
-    .sure-dialog__body { padding:1.25rem; overflow-y:auto; flex:1; }
-    .sure-dialog__resize { position:absolute; background:transparent; z-index:5; }
-    .sure-dialog__resize--e { top:0; right:0; bottom:16px; width:6px; cursor:ew-resize; }
-    .sure-dialog__resize--s { bottom:0; left:0; right:16px; height:6px; cursor:ns-resize; }
-    .sure-dialog__resize--se { bottom:0; right:0; width:16px; height:16px; cursor:nwse-resize; background:linear-gradient(135deg,transparent 50%,var(--muted) 50%); border-radius:0 0 12px 0; }
+  css: >
+    .sure-dialog-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5);
+    z-index:200; display:flex; align-items:center; justify-content:center; }
+    .sure-dialog { background:var(--surface); border-radius:12px; display:flex;
+    flex-direction:column; box-shadow:0 8px 32px rgba(0,0,0,0.2); position:relative; }
 example:
   usage: Generate a settings dialog with provider select, model input, temperature slider, and theme picker. Resizable from right edge, bottom edge, and corner. Draggable by header.
   code: |
