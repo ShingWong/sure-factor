@@ -1,0 +1,90 @@
+name: dialog
+description: Draggable, resizable modal dialog for settings, editors, detail views, and agent content preview. Supports configurable resize edges and drag-by-header.
+tier: prototype
+parameters:
+  title:
+    type: text
+    required: true
+  content:
+    type: text
+    required: true
+    description: Inner HTML or component reference
+  width:
+    type: number
+    required: false
+    default: 480
+  resizeEdges:
+    type: text
+    required: false
+    default: e,s,se
+    description: Comma-separated edge codes (e, s, se, w, n, nw, ne, sw)
+  draggable:
+    type: boolean
+    required: false
+    default: true
+  showClose:
+    type: boolean
+    required: false
+    default: true
+behavior:
+  notificationModes:
+    - inline
+    - toast
+  audio:
+    errorBell: false
+    successChime: false
+  voiceHelp: false
+  autoFocus: true
+scripts:
+  - dialog-handler.js
+cssClasses:
+  overlay: sure-dialog-overlay
+  dialog: sure-dialog
+  header: sure-dialog__header
+  title: sure-dialog__title
+  close: sure-dialog__close
+  body: sure-dialog__body
+  resizeHandle: sure-dialog__resize
+  resizeE: sure-dialog__resize--e
+  resizeS: sure-dialog__resize--s
+  resizeSE: sure-dialog__resize--se
+output:
+  html: |
+    <div class="sure-dialog-overlay" id="{{id}}-overlay">
+      <div class="sure-dialog" id="{{id}}">
+        <div class="sure-dialog__header">
+          <h2 class="sure-dialog__title">{{title}}</h2>
+          <button class="sure-dialog__close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="sure-dialog__body">{{content}}</div>
+        <div class="sure-dialog__resize sure-dialog__resize--e"></div>
+        <div class="sure-dialog__resize sure-dialog__resize--s"></div>
+        <div class="sure-dialog__resize sure-dialog__resize--se"></div>
+      </div>
+    </div>
+  js: |
+    function open{{Name}}(opts) {
+      openModal({
+        title: opts.title,
+        content: opts.content,
+        width: opts.width || 480,
+        resizeEdges: (opts.resizeEdges || 'e,s,se').split(','),
+        draggable: opts.draggable !== false,
+      })
+    }
+  css: |
+    .sure-dialog-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200; display:flex; align-items:center; justify-content:center; }
+    .sure-dialog { background:var(--surface); border-radius:12px; display:flex; flex-direction:column; box-shadow:0 8px 32px rgba(0,0,0,0.2); position:relative; }
+    .sure-dialog__header { padding:1rem 1.25rem; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:grab; user-select:none; }
+    .sure-dialog__header:active { cursor:grabbing; }
+    .sure-dialog__title { font-size:1rem; font-weight:700; }
+    .sure-dialog__close { background:none; border:none; cursor:pointer; color:var(--muted); font-size:1.25rem; }
+    .sure-dialog__body { padding:1.25rem; overflow-y:auto; flex:1; }
+    .sure-dialog__resize { position:absolute; background:transparent; z-index:5; }
+    .sure-dialog__resize--e { top:0; right:0; bottom:16px; width:6px; cursor:ew-resize; }
+    .sure-dialog__resize--s { bottom:0; left:0; right:16px; height:6px; cursor:ns-resize; }
+    .sure-dialog__resize--se { bottom:0; right:0; width:16px; height:16px; cursor:nwse-resize; background:linear-gradient(135deg,transparent 50%,var(--muted) 50%); border-radius:0 0 12px 0; }
+example:
+  usage: Generate a settings dialog with provider select, model input, temperature slider, and theme picker. Resizable from right edge, bottom edge, and corner. Draggable by header.
+  code: |
+    openSettingsModal('settings')
