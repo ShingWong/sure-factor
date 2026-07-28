@@ -1,0 +1,23 @@
+name: message-actions
+description: Per-message action toolbar for chat UIs. User messages get edit/delete/copy/resend. Assistant messages get copy/preview/toggle-markdown. Appears on hover. Theme-aware via sure-ui.
+tier: prototype
+parameters:
+  role:
+    type: text
+    required: true
+    description: user | assistant
+  rawContent:
+    type: text
+    required: true
+    description: Original message text (before markdown rendering)
+behavior:
+  notificationModes: []
+audio:
+    errorBell: false
+    successChime: false
+cssClasses:
+  actionsContainer: msg-actions
+  actionButton: msg-actions button
+  body: msg-body
+example:
+  usage: Generate a message action toolbar for user messages with edit, delete, copy, and resend buttons

@@ -1,0 +1,24 @@
+name: preview-panel
+description: Right sidebar content preview for agent-generated output (SVG, HTML, markdown). Shows content in a styled message container with copy, toggle-markdown, and clear actions. Theme-aware via sure-ui.
+tier: prototype
+parameters:
+  contentType:
+    type: text
+    required: true
+    description: svg | html | text
+  content:
+    type: text
+    required: true
+    description: The content to render
+behavior:
+  notificationModes: []
+audio:
+    errorBell: false
+    successChime: false
+cssClasses:
+  panel: preview-panel
+  header: preview-panel__header
+  body: preview-panel__body
+  title: preview-panel__title
+example:
+  usage: Generate a preview panel showing agent-generated SVG with copy and clear actions
