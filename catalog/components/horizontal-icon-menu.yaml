@@ -1,4 +1,4 @@
-name: horizontal-menu
+name: horizontal-icon-menu
 description: Single-level horizontal icon menu bar for chat headers, toolbars, and navigation. Items show on hover with muted icons and accent active state. Theme-aware via sure-ui. Supports dividers and separator groups.
 tier: prototype
 parameters:
