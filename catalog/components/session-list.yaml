@@ -1,0 +1,36 @@
+name: session-list
+description: Collapsible session/conversation list with rename and delete. Sessions stored client-side in cookies via sure-state. Theme-aware via sure-ui CSS variables.
+tier: prototype
+parameters:
+  items:
+    type: array
+    required: true
+    description: Array of { id, title } session objects
+  activeId:
+    type: string
+    required: false
+    description: Currently selected session ID
+  allowRename:
+    type: boolean
+    required: false
+    default: true
+  allowDelete:
+    type: boolean
+    required: false
+    default: true
+behavior:
+  notificationModes: []
+  audio:
+    errorBell: false
+    successChime: false
+scripts:
+  - session-handler.js
+cssClasses:
+  list: sure-session-list
+  item: sure-session-item
+  title: sure-session-title
+  actions: sure-session-actions
+example:
+  usage: |
+    Generate a session list sidebar with new-chat button and rename/delete on hover.
+    Wire to sure-state cookie store for persistence.
