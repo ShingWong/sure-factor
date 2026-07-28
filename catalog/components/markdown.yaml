@@ -1,0 +1,33 @@
+name: markdown
+description: Renders LLM-generated markdown content as formatted HTML with tables, code blocks, lists, headings, blockquotes, and links. Theme-aware via sure-ui CSS variables.
+tier: prototype
+parameters:
+  content:
+    type: text
+    required: true
+    description: Raw markdown text to render
+  sanitize:
+    type: boolean
+    required: false
+    default: true
+    description: Strip dangerous HTML tags
+behavior:
+  notificationModes: []
+  audio:
+    errorBell: false
+    successChime: false
+  voiceHelp: false
+scripts:
+  - markdown-renderer.js
+cssClasses:
+  root: sure-markdown
+  code: sure-markdown code
+  pre: sure-markdown pre
+  table: sure-markdown table
+  blockquote: sure-markdown blockquote
+  list: sure-markdown ul
+  heading: sure-markdown h3
+  link: sure-markdown a
+  image: sure-markdown img
+example:
+  usage: Render an LLM response containing markdown-formatted text with tables, code blocks, and lists
