@@ -1,0 +1,39 @@
+name: horizontal-menu
+description: Single-level horizontal icon menu bar for chat headers, toolbars, and navigation. Items show on hover with muted icons and accent active state. Theme-aware via sure-ui. Supports dividers and separator groups.
+tier: prototype
+parameters:
+  items:
+    type: array
+    required: true
+    description: Array of { icon, title, onclick, active? } objects
+  position:
+    type: text
+    required: false
+    default: right
+    description: left | right | center
+behavior:
+  notificationModes: []
+  audio:
+    errorBell: false
+    successChime: false
+cssClasses:
+  menu: sure-menu
+  item: sure-menu__item
+  active: active
+  divider: sure-menu__divider
+example:
+  usage: |
+    Generate a horizontal menu for the chat header with items:
+    logout (🚪), help (❓), settings (⚙), keys (🔑), models (🤖),
+    preview toggle (▶), clear (🗑). Right-aligned with dividers
+    between logical groups.
+  code: |
+    <div class="sure-menu" style="justify-content:flex-end">
+      <button class="sure-menu__item" onclick="logout()" title="Logout">🚪</button>
+      <button class="sure-menu__item" onclick="help()" title="Help">❓</button>
+      <div class="sure-menu__divider"></div>
+      <button class="sure-menu__item" onclick="settings()" title="Settings">⚙</button>
+      <button class="sure-menu__item" onclick="keys()" title="Keys">🔑</button>
+      <div class="sure-menu__divider"></div>
+      <button class="sure-menu__item" onclick="preview()" title="Preview">▶</button>
+    </div>
