@@ -1,8 +1,11 @@
 {
-  "name": "sure-factor",
+  "name": "@shing.wong/sure-factor",
   "version": "0.1.1",
   "description": "Database schema to production-grade UI — type catalog, validation, sanitization, i18n, audio, and tiered code generation.",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "author": "ShingWong",
   "repository": {
     "type": "git",
