@@ -5,12 +5,15 @@
 # fall back to .gitignore — which excludes "dist" and would otherwise ship a
 # package containing no code at all.
 #
+# IMPORTANT: when .npmignore exists, npm ignores .gitignore entirely. Every
+# rule that must hold is therefore repeated here, not left to .gitignore.
+#
 # Files listed under "files" in package.json cannot be excluded from here.
 
-# Source and build inputs (only dist/ ships)
+# Source and build inputs
 src/
 tsconfig.json
-tsconfig.tsbuildinfo
+*.tsbuildinfo
 vitest.config.ts
 vitest.e2e.config.ts
 
@@ -24,11 +27,15 @@ package-lock.json
 e2e/
 coverage/
 
-# Local tooling state and CI
+# Local tooling state, CI and agent scratch
 .opencode/
 .superpowers/
+graphify-out/
 .github/
 .gitattributes
+AGENTS.md
+.DS_Store
+*.log
 .env
 .env.*
 
