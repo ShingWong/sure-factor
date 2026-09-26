@@ -20,9 +20,11 @@ describe('block scalars', () => {
     expect(result).not.toBeNull()
     expect(result!.name).toBe('dialog')
     expect(result!.generated).toBeDefined()
-    expect(typeof result!.generated.html).toBe('string')
-    expect(result!.generated.html).toContain('sure-dialog')
-    expect(result!.generated.js).toContain('openModal')
-    expect(result!.generated.css).toContain('sure-dialog-overlay')
+
+    const generated = result!.generated as Record<string, string>
+    expect(typeof generated.html).toBe('string')
+    expect(generated.html).toContain('sure-dialog')
+    expect(generated.js).toContain('openModal')
+    expect(generated.css).toContain('sure-dialog-overlay')
   })
 })
