@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import type { CatalogType, CatalogComponent } from './types'
-import type { ColumnInfo } from './introspect'
+import type { CatalogType, CatalogComponent } from './types.js'
+import type { ColumnInfo } from './introspect.js'
 
 // Unit-test the type shapes and validation logic directly
 describe('TypeScript type shapes', () => {

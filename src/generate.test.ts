@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import type { ColumnInfo } from './introspect'
-import type { CatalogType } from './types'
-import { generateForTier } from './generate'
+import type { ColumnInfo } from './introspect.js'
+import type { CatalogType } from './types.js'
+import { generateForTier } from './generate.js'
 
 // Generate module tests — testing the shape of the output contract
 describe('generate module contracts', () => {

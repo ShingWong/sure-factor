@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { generateStore } from './generate-store'
-import type { ColumnInfo } from './introspect'
+import { generateStore } from './generate-store.js'
+import type { ColumnInfo } from './introspect.js'
 
 describe('generateStore', () => {
   const patientColumns: ColumnInfo[] = [

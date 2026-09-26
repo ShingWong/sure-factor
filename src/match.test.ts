@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import type { ColumnInfo } from './introspect'
-import type { CatalogType } from './types'
-import { matchColumnToTypeSync } from './match'
+import type { ColumnInfo } from './introspect.js'
+import type { CatalogType } from './types.js'
+import { matchColumnToTypeSync } from './match.js'
 
 const mockTypes: CatalogType[] = [
   {

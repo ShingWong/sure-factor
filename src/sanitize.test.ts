@@ -14,7 +14,7 @@ import {
   collapseWhitespace,
   htmlEscape,
   slice,
-} from './sanitize'
+} from './sanitize.js'
 
 describe('individual sanitize steps', () => {
   it('normalize NFKC decomposes homoglyphs', () => {

@@ -7,15 +7,15 @@
 //   src/                 — Generator engine (introspect → match → generate)
 //
 // Public API
-export { introspectSchema } from './introspect'
-export type { ColumnInfo, TableInfo, SchemaInfo } from './introspect'
+export { introspectSchema } from './introspect.js'
+export type { ColumnInfo, TableInfo, SchemaInfo } from './introspect.js'
 
-export { matchColumnToType, type TypeMatchResult } from './match'
+export { matchColumnToType, type TypeMatchResult } from './match.js'
 
-export { generateForTier, type GenerationTier, type GenerateOptions } from './generate'
-export { generateStore, type StoreGenerationOptions, type GeneratedStoreOutput, type SyncDirection } from './generate-store'
-export { sanitize, sanitizeInput, sanitizeOutput } from './sanitize'
-export { toYaml, toJson, fromJson, toMarkdown, toXml, fromXml, convert } from './serialize'
-export { formatCode, formatGeneratedOutput, formatGeneratedStoreOutput } from './format'
-export type { FormattedOutput, FormattedStoreOutput } from './format'
-export type { CatalogType, CatalogComponent, CatalogAsset } from './types'
+export { generateForTier, type GenerationTier, type GenerateOptions } from './generate.js'
+export { generateStore, type StoreGenerationOptions, type GeneratedStoreOutput, type SyncDirection } from './generate-store.js'
+export { sanitize, sanitizeInput, sanitizeOutput } from './sanitize.js'
+export { toYaml, toJson, fromJson, toMarkdown, toXml, fromXml, convert } from './serialize.js'
+export { formatCode, formatGeneratedOutput, formatGeneratedStoreOutput } from './format.js'
+export type { FormattedOutput, FormattedStoreOutput } from './format.js'
+export type { CatalogType, CatalogComponent, CatalogAsset } from './types.js'

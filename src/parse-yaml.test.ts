@@ -1,6 +1,6 @@
 
 import { describe, it, expect } from 'vitest'
-import { parseYaml } from './parse-yaml'
+import { parseYaml } from './parse-yaml.js'
 
 describe('block scalars', () => {
   it('parses literal block scalar (|)', () => {

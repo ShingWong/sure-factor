@@ -1,4 +1,4 @@
-import type { ColumnInfo } from './introspect'
+import type { ColumnInfo } from './introspect.js'
 
 export type SyncDirection = 'client-first' | 'server-first'
 export type GenerationTier = 'vibe' | 'prototype' | 'production'

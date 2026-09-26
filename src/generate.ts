@@ -1,8 +1,8 @@
 import { readFileSync } from 'fs'
-import type { SchemaInfo, ColumnInfo } from './introspect'
-import type { CatalogType, CatalogComponent } from './types'
-import { matchColumnToTypeSync, loadAllTypesSync } from './match'
-import { parseYaml } from './parse-yaml'
+import type { SchemaInfo, ColumnInfo } from './introspect.js'
+import type { CatalogType, CatalogComponent } from './types.js'
+import { matchColumnToTypeSync, loadAllTypesSync } from './match.js'
+import { parseYaml } from './parse-yaml.js'
 
 export type GenerationTier = 'vibe' | 'prototype' | 'production'
 

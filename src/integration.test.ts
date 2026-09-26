@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { introspectSchemaFromDdl } from './introspect'
-import { loadAllTypesSync, matchColumnToTypeSync } from './match'
-import { generateForTier } from './generate'
-import { generateStore } from './generate-store'
+import { introspectSchemaFromDdl } from './introspect.js'
+import { loadAllTypesSync, matchColumnToTypeSync } from './match.js'
+import { generateForTier } from './generate.js'
+import { generateStore } from './generate-store.js'
 
 describe('full pipeline: introspect → match → generate', () => {
   const ddl = `

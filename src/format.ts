@@ -1,5 +1,5 @@
-import type { GeneratedOutput } from './generate'
-import type { GeneratedStoreOutput } from './generate-store'
+import type { GeneratedOutput } from './generate.js'
+import type { GeneratedStoreOutput } from './generate-store.js'
 
 export interface FormattedOutput extends GeneratedOutput {
   formattedRoutes: string

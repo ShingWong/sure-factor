@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { toYaml, toJson, fromJson, toMarkdown, toXml, fromXml, convert } from './serialize'
-import { parseYaml } from './parse-yaml'
+import { toYaml, toJson, fromJson, toMarkdown, toXml, fromXml, convert } from './serialize.js'
+import { parseYaml } from './parse-yaml.js'
 
 const zip5data: Record<string, unknown> = {
   name: 'zip5',

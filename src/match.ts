@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'fs'
-import type { ColumnInfo } from './introspect'
-import type { CatalogType } from './types'
-import { parseYaml } from './parse-yaml'
+import type { ColumnInfo } from './introspect.js'
+import type { CatalogType } from './types.js'
+import { parseYaml } from './parse-yaml.js'
 
 export interface TypeMatchResult {
   type: CatalogType

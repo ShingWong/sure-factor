@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { formatCode, formatGeneratedOutput, formatGeneratedStoreOutput } from './format'
-import { generateForTier } from './generate'
-import { generateStore } from './generate-store'
-import { introspectSchemaFromDdl } from './introspect'
+import { formatCode, formatGeneratedOutput, formatGeneratedStoreOutput } from './format.js'
+import { generateForTier } from './generate.js'
+import { generateStore } from './generate-store.js'
+import { introspectSchemaFromDdl } from './introspect.js'
 
 describe('formatCode', () => {
   it('formats TypeScript code', async () => {

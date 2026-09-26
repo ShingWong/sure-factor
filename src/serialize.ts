@@ -1,4 +1,4 @@
-import { parseYaml } from './parse-yaml'
+import { parseYaml } from './parse-yaml.js'
 
 export interface ConvertOptions {
   rootName?: string

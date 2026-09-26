@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { introspectSchemaFromDdl } from './introspect'
+import { introspectSchemaFromDdl } from './introspect.js'
 
 describe('introspectSchemaFromDdl', () => {
   it('parses a simple CREATE TABLE', () => {
