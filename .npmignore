@@ -1,0 +1,35 @@
+# npm ignore — defense in depth
+#
+# The authoritative control is the "files" allowlist in package.json.
+# This file exists so that IF that array is ever removed, this repo does not
+# fall back to .gitignore — which excludes "dist" and would otherwise ship a
+# package containing no code at all.
+#
+# Files listed under "files" in package.json cannot be excluded from here.
+
+# Source and build inputs (only dist/ ships)
+src/
+tsconfig.json
+tsconfig.tsbuildinfo
+vitest.config.ts
+vitest.e2e.config.ts
+
+# Dependencies and lockfiles
+node_modules/
+package-lock.json
+
+# Tests and coverage
+*.test.*
+*.spec.*
+e2e/
+coverage/
+
+# Local tooling state and CI
+.opencode/
+.superpowers/
+.github/
+.gitattributes
+.env
+.env.*
+
+# dist/ and catalog/ are intentionally NOT listed — they ship.
