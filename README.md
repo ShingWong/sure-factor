@@ -3,9 +3,9 @@
 **Database schema → production-grade UI components.** A code generation framework that introspects SQL schemas, matches columns to a typed catalog, and generates validated, sanitized, internationalized form UIs at three tiers — vibe, prototype, and production.
 
 ```ts
-import { introspectSchemaFromDdl } from 'sure-factor/introspect'
-import { matchColumnToTypeSync, loadAllTypesSync } from 'sure-factor'
-import { generateForTier } from 'sure-factor/generate'
+import { introspectSchemaFromDdl } from '@shing.wong/sure-factor/introspect'
+import { matchColumnToTypeSync, loadAllTypesSync } from '@shing.wong/sure-factor'
+import { generateForTier } from '@shing.wong/sure-factor/generate'
 
 const schema = introspectSchemaFromDdl(`CREATE TABLE patients (
   id UUID PRIMARY KEY,
@@ -82,12 +82,12 @@ const output = generateForTier(schema, { tier: 'production', component: 'form' }
 ## Quick Start
 
 ```ts
-import { introspectSchemaFromDdl } from 'sure-factor/introspect'
-import { loadAllTypesSync, matchColumnToTypeSync } from 'sure-factor'
-import { generateForTier } from 'sure-factor/generate'
-import { generateStore } from 'sure-factor/generate-store'
-import { sanitize } from 'sure-factor/sanitize'
-import { convert } from 'sure-factor/serialize'
+import { introspectSchemaFromDdl } from '@shing.wong/sure-factor/introspect'
+import { loadAllTypesSync, matchColumnToTypeSync } from '@shing.wong/sure-factor'
+import { generateForTier } from '@shing.wong/sure-factor/generate'
+import { generateStore } from '@shing.wong/sure-factor/generate-store'
+import { sanitize } from '@shing.wong/sure-factor/sanitize'
+import { convert } from '@shing.wong/sure-factor/serialize'
 
 // 1. Introspect — parse DDL into typed schema
 const schema = introspectSchemaFromDdl(`
@@ -227,7 +227,7 @@ Generation progresses through three quality tiers — same schema, different out
 Declarative step functions that compose into input and output pipelines:
 
 ```ts
-import { sanitize, sanitizeInput, sanitizeOutput } from 'sure-factor/sanitize'
+import { sanitize, sanitizeInput, sanitizeOutput } from '@shing.wong/sure-factor/sanitize'
 
 // Available steps: trim, lowercase, uppercase, stripNonDigits,
 //   stripDirectionOverrides, stripZeroWidth, stripControl,
@@ -245,7 +245,7 @@ sanitize('<script>alert("xss")</script>', ['htmlEscape'])
 Convert between YAML, JSON, XML, and Markdown — useful for exporting catalog definitions:
 
 ```ts
-import { convert, toYaml, toJson, fromJson, toMarkdown, toXml, fromXml } from 'sure-factor/serialize'
+import { convert, toYaml, toJson, fromJson, toMarkdown, toXml, fromXml } from '@shing.wong/sure-factor/serialize'
 
 convert(yamlString, 'yaml', 'json')    // YAML → JSON
 convert(jsonString, 'json', 'yaml')    // JSON → YAML
@@ -258,7 +258,7 @@ convert(xmlString, 'xml', 'md')        // XML → Markdown
 Generate a sure-state compatible store from a schema:
 
 ```ts
-import { generateStore } from 'sure-factor/generate-store'
+import { generateStore } from '@shing.wong/sure-factor/generate-store'
 
 const store = generateStore({
   tableName: 'patients',
@@ -279,7 +279,7 @@ const store = generateStore({
 Generated output can be formatted via Prettier:
 
 ```ts
-import { formatCode, formatGeneratedOutput, formatGeneratedStoreOutput } from 'sure-factor/format'
+import { formatCode, formatGeneratedOutput, formatGeneratedStoreOutput } from '@shing.wong/sure-factor/format'
 
 const formatted = await formatGeneratedOutput(output)
 // → same as output, but with formattedRoutes, formattedTemplate, etc.

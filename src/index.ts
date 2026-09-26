@@ -10,7 +10,7 @@
 export { introspectSchema } from './introspect.js'
 export type { ColumnInfo, TableInfo, SchemaInfo } from './introspect.js'
 
-export { matchColumnToType, type TypeMatchResult } from './match.js'
+export { matchColumnToType, matchColumnToTypeSync, loadAllTypesSync, type TypeMatchResult } from './match.js'
 
 export { generateForTier, type GenerationTier, type GenerateOptions } from './generate.js'
 export { generateStore, type StoreGenerationOptions, type GeneratedStoreOutput, type SyncDirection } from './generate-store.js'
