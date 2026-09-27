@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { introspectSchemaFromDdl } from './introspect.js'
+import { introspectSchema, introspectSchemaFromDdl } from './introspect.js'
 
 describe('introspectSchemaFromDdl', () => {
   it('parses a simple CREATE TABLE', () => {
@@ -146,5 +146,194 @@ describe('introspectSchemaFromDdl', () => {
   it('returns empty for malformed input', () => {
     const schema = introspectSchemaFromDdl('this is not SQL')
     expect(schema.tables).toHaveLength(0)
+  })
+
+  it('parses a table whose final statement has no trailing semicolon', () => {
+    const ddl = `CREATE TABLE a (id SERIAL PRIMARY KEY, name VARCHAR(50))`
+    const schema = introspectSchemaFromDdl(ddl)
+    expect(schema.tables).toHaveLength(1)
+    expect(schema.tables[0]!.columns).toHaveLength(2)
+  })
+
+  it('parses quoted and mixed-case identifiers', () => {
+    const ddl = `CREATE TABLE "User" (
+      "user data" VARCHAR(255) NOT NULL,
+      id SERIAL PRIMARY KEY
+    );`
+    const schema = introspectSchemaFromDdl(ddl)
+    expect(schema.tables[0]!.tableName).toBe('user')
+    expect(schema.tables[0]!.columns[0]!.columnName).toBe('user data')
+  })
+
+  it('parses a schema-qualified quoted table name', () => {
+    const ddl = `CREATE TABLE "app"."User" (id SERIAL PRIMARY KEY);`
+    const schema = introspectSchemaFromDdl(ddl)
+    expect(schema.tables[0]!.schema).toBe('app')
+    expect(schema.tables[0]!.tableName).toBe('user')
+  })
+
+  it('does not truncate a column block at a paren inside a type', () => {
+    // VARCHAR(255) and DECIMAL(10, 2) contain ')' — a non-greedy regex stops there.
+    const ddl = `CREATE TABLE t (
+      a VARCHAR(255) NOT NULL,
+      b DECIMAL(10, 2),
+      c TIMESTAMP DEFAULT NOW()
+    );`
+    const cols = introspectSchemaFromDdl(ddl).tables[0]!.columns
+    expect(cols).toHaveLength(3)
+    expect(cols.map(c => c.columnName)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('keeps a full function call as the default value', () => {
+    const ddl = `CREATE TABLE t (
+      id SERIAL,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`
+    const cols = introspectSchemaFromDdl(ddl).tables[0]!.columns
+    expect(cols[1]!.defaultValue).toBe('NOW()')
+    expect(cols[2]!.defaultValue).toBe('CURRENT_TIMESTAMP')
+  })
+
+  it('keeps a paren inside a string default intact', () => {
+    const ddl = `CREATE TABLE t (
+      id SERIAL,
+      label VARCHAR(50) DEFAULT 'a(b)c',
+      other INT NOT NULL
+    );`
+    const cols = introspectSchemaFromDdl(ddl).tables[0]!.columns
+    expect(cols).toHaveLength(3)
+    expect(cols[1]!.defaultValue).toBe("'a(b)c'")
+    expect(cols[2]!.columnName).toBe('other')
+  })
+
+  it('parses a table followed by a trailing comment', () => {
+    const ddl = `CREATE TABLE t (id SERIAL PRIMARY KEY, name TEXT)
+-- trailing comment`
+    const schema = introspectSchemaFromDdl(ddl)
+    expect(schema.tables).toHaveLength(1)
+    expect(schema.tables[0]!.columns).toHaveLength(2)
+  })
+
+  it('parses multiple tables each with parenthesised types', () => {
+    const ddl = `CREATE TABLE a (id SERIAL PRIMARY KEY, name VARCHAR(10));
+                 CREATE TABLE b (id SERIAL PRIMARY KEY, total DECIMAL(10, 2));`
+    const schema = introspectSchemaFromDdl(ddl)
+    expect(schema.tables).toHaveLength(2)
+    expect(schema.tables[1]!.columns).toHaveLength(2)
+  })
+})
+
+describe('introspectSchema argument validation', () => {
+  it('rejects an empty connection string', async () => {
+    await expect(introspectSchema('')).rejects.toThrow(TypeError)
+  })
+
+  it('rejects an empty schema list rather than introspecting everything', async () => {
+    await expect(introspectSchema('postgres://x', [])).rejects.toThrow(TypeError)
+  })
+
+  it('surfaces an actionable error when the database is unreachable', async () => {
+    // Port 1 is reserved and refuses connections.
+    await expect(introspectSchema('postgres://127.0.0.1:1/none', ['public'])).rejects.toThrow(
+      /Could not connect to PostgreSQL/
+    )
+  })
+
+  it('does not silently swallow a failure', async () => {
+    await expect(introspectSchema('postgres://127.0.0.1:1/none', ['public'])).rejects.toThrow()
+  })
+
+  it('uses an injected client and returns mapped tables', async () => {
+    const calls: string[] = []
+    const sentValues: unknown[] = []
+    const fake = {
+      async query(sql: string, values?: unknown[]): Promise<{ rows: unknown[] }> {
+        calls.push(sql)
+        sentValues.push(values)
+        if (sql.includes('information_schema.tables')) {
+          return { rows: [{ table_schema: 'public', table_name: 'users' }] }
+        }
+        // The constraint query also reads information_schema.columns, so it must
+        // be matched first.
+        if (sql.includes('table_constraints')) {
+          return {
+            rows: [
+              {
+                table_schema: 'public',
+                table_name: 'users',
+                column_name: 'id',
+                primary_key: true,
+                foreign_table: null,
+                foreign_column: null,
+              },
+            ],
+          }
+        }
+        if (sql.includes('information_schema.columns')) {
+          return {
+            rows: [
+              {
+                table_schema: 'public',
+                table_name: 'users',
+                column_name: 'id',
+                data_type: 'integer',
+                is_nullable: 'NO',
+                character_maximum_length: null,
+                default_value: null,
+                ordinal_position: 1,
+              },
+              {
+                table_schema: 'public',
+                table_name: 'users',
+                column_name: 'email',
+                data_type: 'character varying',
+                is_nullable: 'YES',
+                character_maximum_length: 255,
+                default_value: null,
+                ordinal_position: 2,
+              },
+            ],
+          }
+        }
+        return { rows: [{ table_schema: 'public', table_name: 'users', column_name: 'id', primary_key: true, foreign_table: null, foreign_column: null }] }
+      },
+    }
+    const result = await introspectSchema('postgres://unused', ['public'], fake)
+    expect(result.tables).toHaveLength(1)
+    expect(result.tables[0]!.tableName).toBe('users')
+    expect(result.tables[0]!.columns).toHaveLength(2)
+    const id = result.tables[0]!.columns[0]!
+    expect(id.columnName).toBe('id')
+    expect(id.isNullable).toBe(false)
+    expect(id.isPrimaryKey).toBe(true)
+    const email = result.tables[0]!.columns[1]!
+    expect(email.maxLength).toBe(255)
+    // The schema filter must be passed through as a bound parameter rather than
+    // interpolated into the SQL. Every catalog query must carry it.
+    const selectQueries = calls.filter(c => c.trimStart().toUpperCase().startsWith('SELECT'))
+    expect(selectQueries.length).toBe(3)
+    for (const sql of selectQueries) {
+      expect(sql, 'schema filter missing').toContain('ANY($1::text[])')
+    }
+    // Every query must bind the requested schemas as $1.
+    expect(sentValues).toHaveLength(3)
+    for (const v of sentValues) {
+      expect(v).toEqual([['public']])
+    }
+  })
+
+  it('does not close a client it did not create', async () => {
+    let closed = false
+    const fake = {
+      async query(): Promise<{ rows: unknown[] }> {
+        return { rows: [] }
+      },
+      async end() {
+        closed = true
+      },
+    }
+    await introspectSchema('postgres://unused', ['public'], fake)
+    expect(closed).toBe(false)
   })
 })

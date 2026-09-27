@@ -7,7 +7,7 @@
 //   src/                 — Generator engine (introspect → match → generate)
 //
 // Public API
-export { introspectSchema } from './introspect.js'
+export { introspectSchema, introspectSchemaFromDdl, PostgresConnectionError } from './introspect.js'
 export type { ColumnInfo, TableInfo, SchemaInfo } from './introspect.js'
 
 export { matchColumnToType, matchColumnToTypeSync, loadAllTypesSync, type TypeMatchResult } from './match.js'

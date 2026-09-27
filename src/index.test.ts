@@ -33,6 +33,11 @@ describe('public API surface (index barrel)', () => {
     expect(typeof matchColumnToType).toBe('function')
   })
 
+  it('re-exports the DDL-only introspector from the root barrel', () => {
+    // Consumers must be able to introspect without a live connection.
+    expect(typeof introspectSchemaFromDdl).toBe('function')
+  })
+
   it('re-exports the documented generator and serializer API', () => {
     for (const fn of [
       introspectSchema,
