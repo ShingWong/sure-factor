@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { formatCode, formatGeneratedOutput, formatGeneratedStoreOutput } from './format.js'
 import { generateForTier } from './generate.js'
 import { generateStore } from './generate-store.js'
@@ -21,6 +21,33 @@ describe('formatCode', () => {
   it('returns original on failure', async () => {
     const result = await formatCode('not valid >>> code {{{', 'typescript')
     expect(result).toBe('not valid >>> code {{{')
+  })
+
+  it('warns when input could not be parsed instead of failing silently', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await formatCode('not valid >>> code {{{', 'typescript')
+    expect(warn).toHaveBeenCalled()
+    expect(String(warn.mock.calls[0]![0])).toContain('could not parse')
+    warn.mockRestore()
+  })
+
+  it('does not warn when formatting succeeds', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const result = await formatCode('const  x:number  =1', 'typescript')
+    expect(result).toContain('const x: number = 1')
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
+
+  it('handles concurrent calls without duplicate import failures', async () => {
+    // The module promise is memoized, so concurrent callers share one import
+    // rather than each starting (and each failing) their own.
+    const results = await Promise.all([
+      formatCode('const a=1', 'typescript'),
+      formatCode('const b=2', 'typescript'),
+      formatCode('const c=3', 'typescript'),
+    ])
+    for (const r of results) expect(r).toContain('const')
   })
 })
 

@@ -34,7 +34,7 @@ describe('generateStore', () => {
       tier: 'vibe',
       apiPath: '/api/v2/claims',
     })
-    expect(result.apiCode).toContain("fetch('/api/v2/claims')")
+    expect(result.apiCode).toContain('fetch("/api/v2/claims")')
     expect(result.apiCode).toContain("fetch(`/api/v2/claims/${id}`)")
     expect(result.apiCode).toContain("method: 'POST'")
     expect(result.apiCode).toContain("method: 'PUT'")
@@ -47,7 +47,7 @@ describe('generateStore', () => {
       columns: patientColumns,
       tier: 'vibe',
     })
-    expect(result.storeCode).toContain("sync: 'client-first'")
+    expect(result.storeCode).toContain('sync: "client-first"')
     expect(result.storeCode).not.toContain('versioning: true')
     expect(result.storeCode).toContain('createEntityStore')
   })
@@ -58,7 +58,7 @@ describe('generateStore', () => {
       columns: patientColumns,
       tier: 'production',
     })
-    expect(result.storeCode).toContain("sync: 'server-first'")
+    expect(result.storeCode).toContain('sync: "server-first"')
     expect(result.storeCode).toContain('versioning: true')
   })
 

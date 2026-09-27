@@ -33,8 +33,33 @@ function toCamelCase(str: string): string {
   return pascal.charAt(0).toLowerCase() + pascal.slice(1)
 }
 
+/**
+ * Render a value as a single-quoted TypeScript string literal.
+ *
+ * JSON.stringify is used deliberately: it is a correct JS/TS string escaper, so
+ * it neutralises quotes, backslashes and line terminators. It cannot be used
+ * inside a template literal, because it leaves `$` and `{` untouched and an
+ * interpolated `${...}` would become live code in the generated file — use
+ * `templateLiteral` for that case.
+ */
 function esc(val: string): string {
-  return val.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/`/g, '\\`')
+  return JSON.stringify(val)
+}
+
+/**
+ * Render a value for interpolation into a template literal.
+ *
+ * Escapes backticks, backslashes and `${` so the text cannot terminate the
+ * literal or open an interpolation. Newlines are escaped as well to keep the
+ * generated source on one line.
+ */
+function templateLiteral(val: string): string {
+  return val
+    .replace(/\\/g, '\\\\')
+    .replace(/`/g, '\\`')
+    .replace(/\$\{/g, '\\${')
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n')
 }
 
 function tsTypeFromSql(dataType: string, isNullable: boolean): string {
@@ -82,31 +107,36 @@ function generateEntityType(tableName: string, columns: ColumnInfo[]): string {
 
 function generateApiAdapter(tableName: string, apiPath: string): string {
   const varName = toCamelCase(tableName)
-  const safePath = esc(apiPath)
+  // `apiPath` is interpolated into both single-quoted literals and template
+  // literals, so it needs an escaper per context. The old single `esc` covered
+  // quotes and backticks but not `${`, letting a crafted path inject live code
+  // into the generated file.
+  const quotedPath = esc(apiPath)
+  const interpolatedPath = templateLiteral(apiPath)
   return `
 const ${varName}Api = {
   list: (): Promise<${toPascalCase(tableName)}[]> =>
-    fetch('${safePath}').then(r => { if (!r.ok) throw new Error('Failed to fetch'); return r.json() }),
+    fetch(${quotedPath}).then(r => { if (!r.ok) throw new Error('Failed to fetch'); return r.json() }),
 
   getById: (id: string): Promise<${toPascalCase(tableName)}> =>
-    fetch(\`${safePath}/\${id}\`).then(r => { if (!r.ok) throw new Error('Not found'); return r.json() }),
+    fetch(\`${interpolatedPath}/\${id}\`).then(r => { if (!r.ok) throw new Error('Not found'); return r.json() }),
 
   create: (data: Partial<${toPascalCase(tableName)}>): Promise<${toPascalCase(tableName)}> =>
-    fetch('${safePath}', {
+    fetch(${quotedPath}, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     }).then(r => { if (!r.ok) throw new Error('Failed to create'); return r.json() }),
 
   update: (id: string, data: Partial<${toPascalCase(tableName)}>): Promise<${toPascalCase(tableName)}> =>
-    fetch(\`${safePath}/\${id}\`, {
+    fetch(\`${interpolatedPath}/\${id}\`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     }).then(r => { if (!r.ok) throw new Error('Failed to update'); return r.json() }),
 
   remove: (id: string): Promise<void> =>
-    fetch(\`${safePath}/\${id}\`, { method: 'DELETE' }).then(r => { if (!r.ok) throw new Error('Failed to delete'); return }),
+    fetch(\`${interpolatedPath}/\${id}\`, { method: 'DELETE' }).then(r => { if (!r.ok) throw new Error('Failed to delete'); return }),
 }`.trim()
 }
 
@@ -115,10 +145,9 @@ function generateStoreCode(tableName: string, options: StoreGenerationOptions): 
   const varName = toCamelCase(tableName)
   const sync = options.sync ?? (options.tier === 'production' ? 'server-first' : 'client-first')
   const versioning = options.versioning ?? (options.tier === 'production')
-  const safeName = esc(tableName)
   const configLines: string[] = [
-    `  name: '${safeName}',`,
-    `  sync: '${sync}',`,
+    `  name: ${esc(tableName)},`,
+    `  sync: ${esc(sync)},`,
     `  api: ${varName}Api,`,
   ]
   if (versioning) {
@@ -126,7 +155,7 @@ function generateStoreCode(tableName: string, options: StoreGenerationOptions): 
   }
   if (options.tier !== 'vibe') {
     configLines.push(`  onMutate: (event) => {`)
-    configLines.push(`    console.debug('[${entityName}]', event.kind)`)
+    configLines.push(`    console.debug(${esc(`[${entityName}]`)}, event.kind)`)
     configLines.push(`  },`)
   }
 
@@ -140,9 +169,11 @@ ${configLines.map(l => `  ${l}`).join('\n')}
 
 export function generateStore(options: StoreGenerationOptions): GeneratedStoreOutput {
   const { tableName, columns } = options
-  const safePath = options.apiPath ? esc(options.apiPath) : `/api/${tableName}`
+  // Pass the raw path through: generateApiAdapter applies the right escaper per
+  // literal context. Escaping here as well would double-encode it.
+  const rawPath = options.apiPath ?? `/api/${tableName}`
   const interfaceCode = generateEntityType(tableName, columns)
-  const apiCode = generateApiAdapter(tableName, safePath)
+  const apiCode = generateApiAdapter(tableName, rawPath)
   const storeCode = generateStoreCode(tableName, options)
 
   const fullCode = [

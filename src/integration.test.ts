@@ -115,7 +115,7 @@ describe('full pipeline: introspect → match → generate', () => {
     expect(result.interfaceCode).toContain('full_name: string')
     expect(result.interfaceCode).toContain('is_active: boolean')
     expect(result.fullCode).toContain('createEntityStore')
-    expect(result.fullCode).toContain("fetch('/api/patients'")
+    expect(result.fullCode).toContain('fetch("/api/patients"')
   })
 
   it('coherence: matched types appear in generated i18n keys', () => {
