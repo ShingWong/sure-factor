@@ -28,3 +28,75 @@ describe('block scalars', () => {
     expect(generated.css).toContain('sure-dialog-overlay')
   })
 })
+
+describe('block arrays of objects', () => {
+  it('keeps every sibling object item, not just the first', () => {
+    const result = parseYaml(
+      ['parameters:', '  fields:', '    - name: email', '      type: email', '    - name: password', '      type: password', ''].join('\n')
+    )
+    expect(result).toEqual({
+      parameters: {
+        fields: [
+          { name: 'email', type: 'email' },
+          { name: 'password', type: 'password' },
+        ],
+      },
+    })
+  })
+
+  it('keeps object items that follow a scalar item', () => {
+    const result = parseYaml(['items:', '  - plain', '  - name: a', '  - name: b', ''].join('\n'))
+    expect(result).toEqual({ items: ['plain', { name: 'a' }, { name: 'b' }] })
+  })
+
+  it('restores the outer array after a nested block array ends', () => {
+    const result = parseYaml(
+      [
+        'columns:',
+        '  - name: first',
+        '    tags:',
+        '      - x',
+        '      - y',
+        '  - name: second',
+        '',
+      ].join('\n')
+    )
+    expect(result).toEqual({
+      columns: [
+        { name: 'first', tags: ['x', 'y'] },
+        { name: 'second' },
+      ],
+    })
+  })
+
+  it('closes a block array when a sibling key follows it', () => {
+    const result = parseYaml(['list:', '  - name: a', 'after: done', ''].join('\n'))
+    expect(result).toEqual({ list: [{ name: 'a' }], after: 'done' })
+  })
+
+  it('round-trips every object item in the shipped component catalog', async () => {
+    const { readFileSync, readdirSync } = await import('fs')
+    const dir = './catalog/components'
+    const files = readdirSync(dir).filter(f => f.endsWith('.yaml'))
+    expect(files.length).toBeGreaterThan(0)
+
+    const countObjects = (node: unknown): number => {
+      if (Array.isArray(node)) {
+        return node.reduce<number>(
+          (n, v) => n + (v !== null && typeof v === 'object' && !Array.isArray(v) ? 1 : 0) + countObjects(v),
+          0
+        )
+      }
+      if (node !== null && typeof node === 'object') {
+        return Object.values(node).reduce<number>((n, v) => n + countObjects(v), 0)
+      }
+      return 0
+    }
+
+    for (const file of files) {
+      const text = readFileSync(`${dir}/${file}`, 'utf-8')
+      const declared = (text.match(/^\s*-\s+[A-Za-z_$][\w$]*\s*:(?:\s|$)/gm) ?? []).length
+      expect(countObjects(parseYaml(text)), `${file} dropped array items`).toBe(declared)
+    }
+  })
+})

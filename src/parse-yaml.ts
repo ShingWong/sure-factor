@@ -62,17 +62,26 @@ export function parseYaml(text: string): Record<string, unknown> | null {
     const path: Array<{ indent: number; obj: Record<string, unknown> }> = [
       { indent: -1, obj: root },
     ]
-    let arrayTarget: { obj: Record<string, unknown>; key: string } | null = null
-    let arrayIndent = -1
+    // Stack of open block arrays. `indent` is the indentation shared by that
+    // array's `- ` items, or -1 until the first item is seen. A stack (rather
+    // than a single target) lets a block array nested inside an array item
+    // hand control back to the outer array when it ends.
+    const arrays: Array<{ obj: Record<string, unknown>; key: string; indent: number }> = []
 
     for (let i = 0; i < lines.length; i++) {
       const trimmed = lines[i]!.trim()
       if (!trimmed || trimmed.startsWith('#')) continue
 
       const indent = lines[i]!.length - lines[i]!.trimStart().length
+      const isItem = trimmed.startsWith('- ')
 
-      if (!trimmed.startsWith('- ')) {
-        arrayTarget = null
+      // Leave every block array whose items sit deeper than this line. This
+      // runs for `- ` items too, so an item at the outer indent closes a
+      // deeper nested array first.
+      while (arrays.length > 0) {
+        const open = arrays[arrays.length - 1]!
+        if (open.indent >= 0 && indent < open.indent) arrays.pop()
+        else break
       }
 
       while (path.length > 1 && path[path.length - 1]!.indent >= indent) {
@@ -81,21 +90,26 @@ export function parseYaml(text: string): Record<string, unknown> | null {
 
       const current = path[path.length - 1]!
 
-      if (trimmed.startsWith('- ')) {
+      if (isItem) {
+        const open = arrays[arrays.length - 1]
+        if (open && open.indent === -1) open.indent = indent
+        // Only an item sharing the array's own indent belongs to it; deeper
+        // items belong to an array nested inside the current item.
+        const target = open && open.indent === indent ? open : undefined
+
         const itemRaw = trimmed.slice(2).trim()
         const itemColon = itemRaw.indexOf(':')
         if (itemColon !== -1 && itemColon < itemRaw.length - 1 && itemRaw[itemColon + 1] === ' ') {
           const itemKey = itemRaw.slice(0, itemColon).trim()
           const itemVal = itemRaw.slice(itemColon + 1).trim()
           const itemObj: Record<string, unknown> = { [itemKey]: parseYamlValue(itemVal) }
-          if (arrayTarget) {
-            ;(arrayTarget.obj[arrayTarget.key] as unknown[]).push(itemObj)
+          if (target) {
+            ;(target.obj[target.key] as unknown[]).push(itemObj)
           }
           path.push({ indent, obj: itemObj })
-          arrayTarget = null
         } else {
-          if (arrayTarget) {
-            ;(arrayTarget.obj[arrayTarget.key] as unknown[]).push(parseYamlValue(itemRaw))
+          if (target) {
+            ;(target.obj[target.key] as unknown[]).push(parseYamlValue(itemRaw))
           }
         }
         continue
@@ -126,7 +140,7 @@ export function parseYaml(text: string): Record<string, unknown> | null {
       if (val === '') {
         if (isNextLineArray(lines, i, indent)) {
           current.obj[key] = []
-          arrayTarget = { obj: current.obj, key }
+          arrays.push({ obj: current.obj, key, indent: -1 })
         } else {
           const nested: Record<string, unknown> = {}
           current.obj[key] = nested
