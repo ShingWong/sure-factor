@@ -148,6 +148,85 @@ describe('introspectSchemaFromDdl', () => {
     expect(schema.tables).toHaveLength(0)
   })
 
+  it('does not collapse timestamp types into a date', () => {
+    // TIMESTAMPTZ contains TIMESTAMP, and TIMESTAMP contains DATE. A timestamp
+    // is not a date: the date-iso catalog type matches only data_type = 'date',
+    // so reporting 'date' here would attach a date-only validation regex to a
+    // timestamp column.
+    const ddl = `CREATE TABLE events (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMP,
+      deleted_at TIMESTAMP WITH TIME ZONE,
+      starts_at TIME,
+      born_on DATE,
+      day DATE
+    );`
+    const byName = Object.fromEntries(
+      introspectSchemaFromDdl(ddl).tables[0]!.columns.map(c => [c.columnName, c.dataType])
+    )
+    expect(byName.created_at).toBe('TIMESTAMPTZ')
+    expect(byName.updated_at).toBe('TIMESTAMP')
+    expect(byName.deleted_at).toBe('TIMESTAMP')
+    expect(byName.starts_at).toBe('TIME')
+    // Real dates still normalise.
+    expect(byName.born_on).toBe('date')
+    expect(byName.day).toBe('date')
+  })
+
+  it('does not let a timestamp type match the date catalog type', () => {
+    // Guards the actual downstream consequence: date-iso matches on
+    // data_type = 'date', so a timestamp reported as 'date' would be given a
+    // date-only validation regex.
+    const ddl = `CREATE TABLE events (
+      id SERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );`
+    const createdAt = introspectSchemaFromDdl(ddl).tables[0]!.columns[1]!
+    expect(createdAt.dataType).not.toBe('date')
+  })
+
+  it('keeps integer, boolean and uuid distinct from timestamp types', () => {
+    const ddl = `CREATE TABLE t (
+      a INTEGER,
+      b SERIAL,
+      c BOOLEAN,
+      d UUID,
+      e TIMESTAMPTZ
+    );`
+    const types = introspectSchemaFromDdl(ddl).tables[0]!.columns.map(c => c.dataType)
+    expect(types).toEqual(['integer', 'integer', 'boolean', 'uuid', 'TIMESTAMPTZ'])
+  })
+
+  it('normalises every integer spelling, including BIGSERIAL', () => {
+    // SERIAL is mid-word in BIGSERIAL, so a bare \bSERIAL\b test would miss it
+    // and fall through to the raw type.
+    const ddl = `CREATE TABLE t (
+      a INT,
+      b INTEGER,
+      c SMALLINT,
+      d BIGINT,
+      e SERIAL,
+      f BIGSERIAL,
+      g SMALLSERIAL,
+      h SERIAL8
+    );`
+    const types = introspectSchemaFromDdl(ddl).tables[0]!.columns.map(c => c.dataType)
+    expect(types).toEqual(Array(8).fill('integer'))
+  })
+
+  it('does not treat CITEXT as text', () => {
+    // TEXT is mid-word in CITEXT, and a case-insensitive text type is not a
+    // plain text type, so it must not pick up the `text` catalog type.
+    const ddl = `CREATE TABLE t (
+      a CITEXT NOT NULL,
+      b TEXT,
+      c VARCHAR(50)
+    );`
+    const types = introspectSchemaFromDdl(ddl).tables[0]!.columns.map(c => c.dataType)
+    expect(types).toEqual(['CITEXT', 'text', 'varchar'])
+  })
+
   it('parses a table whose final statement has no trailing semicolon', () => {
     const ddl = `CREATE TABLE a (id SERIAL PRIMARY KEY, name VARCHAR(50))`
     const schema = introspectSchemaFromDdl(ddl)

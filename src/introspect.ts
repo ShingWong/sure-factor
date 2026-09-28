@@ -456,21 +456,41 @@ export function introspectSchemaFromDdl(ddl: string): SchemaInfo {
 
       const maxLengthMatch = rawType.match(/VARCHAR\s*\(\s*(\d+)\s*\)/i)
       const maxLength = maxLengthMatch ? parseInt(maxLengthMatch[1]!, 10) : null
+      // Type inference is ordered, and each test is deliberately narrow.
+      //
+      // Word boundaries alone are not enough: BIGSERIAL must normalise to
+      // 'integer' even though SERIAL is mid-word, while CITEXT must NOT
+      // normalise to 'text' for the same reason. So the integer test uses
+      // explicit alternatives, and the time test runs first because
+      // TIMESTAMPTZ contains TIMESTAMP, which contains DATE.
+      //
+      // Time types are returned raw on purpose. A timestamp is not a date, and
+      // the `date-iso` catalog type matches only `data_type = 'date'`, so
+      // reporting 'date' for a timestamp column would attach a date-only
+      // validation regex to it. Types with no catalog equivalent (TIMESTAMPTZ,
+      // CITEXT) also fall through, which is more honest than mislabelling them.
+      // No leading \b on SERIAL: in BIGSERIAL / SMALLSERIAL it is mid-word, and
+      // a boundary there would miss the most common auto-increment spelling.
+      const isIntegerType =
+        /\b(?:TINYINT|SMALLINT|MEDIUMINT|INTEGER|INT|BIGINT)\b|SERIAL/.test(rawType)
+      const isTimeType = /\b(?:TIMESTAMPTZ|TIMESTAMP|TIME)\b/.test(rawType)
       const dataType = maxLengthMatch
         ? 'varchar'
-        : rawType.includes('INT') || rawType.includes('SERIAL')
-          ? 'integer'
-          : rawType.includes('DATE') || rawType.includes('TIMESTAMP')
-            ? 'date'
-            : rawType.includes('BOOL')
-              ? 'boolean'
-              : rawType.includes('UUID')
-                ? 'uuid'
-                : rawType.includes('JSON')
-                  ? 'json'
-                  : rawType.includes('TEXT')
-                    ? 'text'
-                    : rawType
+        : isTimeType
+          ? rawType
+          : isIntegerType
+            ? 'integer'
+            : /\bDATE\b/.test(rawType)
+              ? 'date'
+              : /\bBOOL/.test(rawType)
+                ? 'boolean'
+                : /\bUUID\b/.test(rawType)
+                  ? 'uuid'
+                  : /\bJSON/.test(rawType)
+                    ? 'json'
+                    : /\bTEXT\b/.test(rawType)
+                      ? 'text'
+                      : rawType
 
       const originalRest = parsed.rest
       const rest = originalRest.toUpperCase()
