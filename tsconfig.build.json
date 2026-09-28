@@ -1,0 +1,10 @@
+{
+  // Build-only config. Extends the base config so `npm run lint` keeps
+  // typechecking test files, while the published output omits them.
+  //
+  // tsconfig.json deliberately still includes tests: a type error in a test is
+  // still a type error, and excluding them there would hide it. Only the emit
+  // step drops them.
+  "extends": "./tsconfig.json",
+  "exclude": ["src/**/*.test.ts"]
+}

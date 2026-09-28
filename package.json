@@ -51,9 +51,9 @@
     "!dist/**/*.test.*"
   ],
   "scripts": {
-    "build": "tsc",
-    "test": "vitest run",
-    "test:unit": "vitest run --exclude='src/e2e.test.ts'",
+    "build": "tsc -p tsconfig.build.json",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "vitest run",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
