@@ -100,6 +100,10 @@ const schema = introspectSchemaFromDdl(`
   );
 `)
 
+// …or introspect a live database (the `pg` driver ships as a dependency):
+// import { introspectSchema } from '@shing.wong/sure-factor'
+// const live = await introspectSchema(process.env.DATABASE_URL!, ['public'])
+
 // 2. Match — match columns to catalog types
 const allTypes = loadAllTypesSync()
 const emailCol = schema.tables[0]!.columns.find(c => c.columnName === 'email')!
@@ -240,6 +244,29 @@ sanitize('<script>alert("xss")</script>', ['htmlEscape'])
 // → '&lt;script&gt;alert(&quot;xss&quot;)&lt;&#x2F;script&gt;'
 ```
 
+### Rich text output
+
+`sanitizeOutput(value, true)` filters rich text through a tag and attribute
+allowlist rather than passing it through:
+
+```ts
+sanitizeOutput('<p>hi <strong>there</strong></p>', true)
+// → '<p>hi <strong>there</strong></p>'
+
+sanitizeOutput('<img src=x onerror=alert(1)>', true)
+// → ''  (element dropped)
+
+sanitizeOutput('<a href="javascript:alert(1)">x</a>', true)
+// → '<a>x</a>'  (unsafe URL dropped)
+```
+
+Permitted elements are `a`, `b`, `blockquote`, `br`, `code`, `del`, `em`,
+`h1`-`h6`, `hr`, `i`, `li`, `ol`, `p`, `pre`, `s`, `span`, `strong`, `sub`,
+`sup`, `u` and `ul`, with `class`/`title` on any element and
+`href`/`title`/`rel`/`target` on links. Everything else — including `table`,
+`img`, `form` and every `on*` handler — is dropped. This was a pass-through
+before 0.2.0; see [CHANGELOG.md](./CHANGELOG.md) before upgrading.
+
 ## Serialization
 
 Convert between YAML, JSON, XML, and Markdown — useful for exporting catalog definitions:
@@ -310,8 +337,12 @@ git clone git@github.com:ShingWong/sure-factor.git
 cd sure-factor
 npm install
 npm run build
-npm test                 # 132 tests (unit + integration)
-npm run test:unit        # unit only
-npm run test:e2e         # Playwright E2E
-npm run lint             # tsc --noEmit
+npm test                 # 176 tests (173 unit + 3 Playwright render)
+npm run test:unit        # 173, no browser required
+npm run test:e2e         # 3, needs `npx playwright install chromium`
+npm run lint             # tsc --noEmit, includes test files
+npm run verify           # lint + build + test + export check (what CI runs)
 ```
+
+`npm run test:e2e` runs only the tests under `src/e2e/`, which drive a real
+Chromium. `npm run test:unit` covers everything else and needs no browser.

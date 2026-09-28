@@ -1,6 +1,6 @@
 {
   "name": "@shing.wong/sure-factor",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Database schema to production-grade UI — type catalog, validation, sanitization, i18n, audio, and tiered code generation.",
   "license": "MIT",
   "publishConfig": {
@@ -48,6 +48,7 @@
   "files": [
     "dist",
     "catalog",
+    "CHANGELOG.md",
     "!dist/**/*.test.*"
   ],
   "scripts": {
@@ -57,6 +58,8 @@
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
+    "check:exports": "node scripts/check-exports.mjs",
+    "verify": "npm run lint && npm run build && npm test && npm run check:exports",
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
@@ -78,5 +81,8 @@
   "dependencies": {
     "pg": "^8.23.0",
     "prettier": "^3.9.6"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
