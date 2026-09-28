@@ -1,0 +1,99 @@
+name: Publish
+
+# Stages a release when the version in package.json changes on master.
+#
+# This never publishes directly and never approves. It submits the package to
+# npm's staging area; a maintainer must then review it and approve with 2FA at
+# https://www.npmjs.com → Staged Packages. npm requires that step for staged
+# publishing even when the submission comes from a trusted publisher, so the
+# human gate is the point, not an obstacle.
+#
+# Authentication uses OIDC trusted publishing, so no npm token is stored in this
+# repository. npm requires Node >= 22.14.0 and npm >= 11.15.0 for
+# `npm stage publish`; CI's lint/build/test job deliberately stays on Node 20,
+# which is the floor the package itself supports.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'package.json'
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  stage:
+    name: stage for release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      # Required for the OIDC token exchange. Deliberately no contents:write —
+      # this job publishes nothing to the repository.
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so the previous version can be read from the parent
+          # commit; fetch-depth 1 would not include it.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: npm
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Detect version change
+        id: detect
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          current=$(node -p "require('./package.json').version")
+          previous=$(git show "${BEFORE_SHA}:package.json" 2>/dev/null \
+            | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).version" 2>/dev/null || echo "")
+          echo "previous=${previous:-none}" >> "$GITHUB_OUTPUT"
+          echo "current=${current}" >> "$GITHUB_OUTPUT"
+          if [ -z "${previous:-}" ] || [ "$previous" != "$current" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "version changed: ${previous:-none} -> ${current}"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "version unchanged at ${current}; nothing to stage"
+          fi
+
+      - name: Install
+        if: steps.detect.outputs.changed == 'true'
+        run: npm ci
+
+      - name: Verify
+        if: steps.detect.outputs.changed == 'true'
+        run: |
+          npm run lint
+          npm run build
+          npm test
+          node scripts/check-exports.mjs
+
+      # The package must already exist on the registry; npm cannot stage a
+      # brand-new package, so a first release still needs a local publish with
+      # a 2FA-protected token.
+      - name: Stage for publishing
+        if: steps.detect.outputs.changed == 'true'
+        run: npm stage publish
+
+      - name: Summary
+        if: steps.detect.outputs.changed == 'true'
+        run: |
+          echo "::notice title=Staged for release::\
+          @shing.wong/sure-factor@${{ steps.detect.outputs.current }} is staged. \
+          Approve it at https://www.npmjs.com (Staged Packages tab) with 2FA. \
+          Staged packages expire, so approve before the deadline."
+
+      - name: Nothing to do
+        if: steps.detect.outputs.changed == 'false'
+        run: echo "package.json version did not change; skipping the release."
