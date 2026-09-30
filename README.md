@@ -79,6 +79,17 @@ const output = generateForTier(schema, { tier: 'production', component: 'form' }
 2. **Match** — Match each column to catalog type definitions using name patterns + data type rules → `TypeMatchResult` with confidence scoring
 3. **Generate** — Produce tier-aware output: routes, templates, i18n, sanitization pipeline, validation rules, theme CSS, and sure-state stores
 
+## Installation
+
+```bash
+npm install @shing.wong/sure-factor
+```
+
+No peer dependencies. `pg` and `prettier` are regular dependencies, so live
+schema introspection and code formatting work without extra setup.
+
+Requires Node >= 20.
+
 ## Quick Start
 
 ```ts
