@@ -9,15 +9,20 @@ name: Publish
 # human gate is the point, not an obstacle.
 #
 # Authentication uses OIDC trusted publishing, so no npm token is stored in this
-# repository. npm requires Node >= 22.14.0 and npm >= 11.15.0 for
-# `npm stage publish`; CI's lint/build/test job deliberately stays on Node 20,
-# which is the floor the package itself supports.
+# repository.
 
 on:
   push:
     branches: [master]
     paths:
       - 'package.json'
+
+# Matches npm's documented trusted-publisher example. Notably id-token: write
+# lives at the workflow level, and caching is disabled because npm rewrites
+# _authToken during a release and a restored cache can pin a stale one.
+permissions:
+  id-token: write
+  contents: read
 
 concurrency:
   group: publish-${{ github.ref }}
@@ -29,24 +34,33 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
-    permissions:
-      # Required for the OIDC token exchange. Deliberately no contents:write —
-      # this job publishes nothing to the repository.
-      id-token: write
-      contents: read
-
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           # Full history so the previous version can be read from the parent
           # commit; fetch-depth 1 would not include it.
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 22.14.0
-          cache: npm
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
+          # npm's docs: never use caching in release builds.
+          package-manager-cache: false
+
+      # `npm stage publish` requires npm >= 11.15.0, but actions/setup-node does
+      # not install the npm bundled with the Node release — it uses the
+      # runner's own npm, which is 10.x. Without this the step fails with:
+      #   Unknown command: "stage"
+      - name: Ensure npm supports staged publishing
+        run: |
+          npm --version
+          if ! npm stage --help >/dev/null 2>&1; then
+            echo "::notice::upgrading npm to 11 (runner ships 10.x, which predates npm stage)"
+            npm install -g 'npm@11'
+          fi
+          echo "npm now: $(npm --version)"
+          npm stage --help >/dev/null 2>&1 || { echo "::error::npm still lacks 'stage'"; exit 1; }
 
       - name: Detect version change
         id: detect
@@ -70,6 +84,12 @@ jobs:
       - name: Install
         if: steps.detect.outputs.changed == 'true'
         run: npm ci
+
+      # `npm test` runs test:e2e, which drives a real Chromium. Without this the
+      # job fails at the Test step before ever reaching staging.
+      - name: Install Chromium for the render tests
+        if: steps.detect.outputs.changed == 'true'
+        run: npx playwright install --with-deps chromium
 
       - name: Verify
         if: steps.detect.outputs.changed == 'true'
