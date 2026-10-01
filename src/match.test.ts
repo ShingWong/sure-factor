@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { ColumnInfo } from './introspect.js'
 import type { CatalogType } from './types.js'
-import { matchColumnToTypeSync } from './match.js'
+import { matchColumnToTypeSync, loadAllTypesSync } from './match.js'
 
 const mockTypes: CatalogType[] = [
   {
@@ -132,5 +132,47 @@ describe('matchColumnToTypeSync', () => {
     const col: ColumnInfo = { columnName: 'email', dataType: 'varchar', isNullable: false, maxLength: 255, defaultValue: null, isPrimaryKey: false, foreignKey: null }
     const result = matchColumnToTypeSync(col, [])
     expect(result).toBeNull()
+  })
+})
+// A column whose name matches nothing must not be assigned a specific type
+// just because its length happens to fit. The maxLength rule is a tie-breaker
+// between types that already matched, never a way to start a match.
+describe('matchColumnToTypeSync: length alone cannot select a type', () => {
+  const column = (columnName: string, dataType: string, maxLength: number | null): ColumnInfo => ({
+    columnName,
+    dataType,
+    isNullable: true,
+    maxLength,
+    defaultValue: null,
+    isPrimaryKey: false,
+    foreignKey: null,
+  })
+
+  it('falls back to text for a name no type claims', () => {
+    const types = loadAllTypesSync()
+    // varchar(40) fits inside email/password/url maxLength, but none of those
+    // rules match the name "plan" — the result must not be one of them.
+    const matched = matchColumnToTypeSync(column('plan', 'varchar', 40), types, 'production')
+    expect(matched, 'a length-only match assigned a specific type').not.toBeNull()
+    const confident = matched!.type.name
+    expect(['email', 'password', 'url', 'us-address', 'full-name', 'credit-card', 'icd10', 'zip5', 'zip9', 'us-phone', 'date-us'])
+      .not.toContain(confident)
+  })
+
+  it('still matches a name a type claims, even when the length also fits', () => {
+    const types = loadAllTypesSync()
+    expect(matchColumnToTypeSync(column('email', 'varchar', 255), types, 'production')!.type.name).toBe('email')
+    expect(matchColumnToTypeSync(column('signup_date', 'date', null), types, 'production')!.type.name).toBe('date-us')
+  })
+
+  it('does not let a length bonus create a match at all', () => {
+    const types = loadAllTypesSync()
+    // Every named type needs a name or data_type match. Anything reached only
+    // by the maxLength bonus is a false positive.
+    for (const name of ['plan', 'status', 'notes', 'token', 'version']) {
+      const matched = matchColumnToTypeSync(column(name, 'varchar', 20), types, 'production')
+      const result = matched?.type.name ?? 'text'
+      expect(['text'], `${name} (varchar 20) was matched as ${result}`).toContain(result)
+    }
   })
 })

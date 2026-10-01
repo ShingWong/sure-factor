@@ -131,7 +131,12 @@ export function matchColumnToTypeSync(column: ColumnInfo, types: CatalogType[], 
       }
     }
 
-    if (type.match?.maxLength != null && type.match.maxLength > 0 && column.maxLength != null) {
+    // The maxLength rule only breaks ties between types that already matched on
+    // name or data type. Awarding it on its own let any type claim any column
+    // short enough to fit: `plan VARCHAR(40)` matched `email` (maxLength 254)
+    // even though email's rule requires an email-ish name, and five types tied
+    // on that bonus so the winner depended on array order.
+    if (score > 0 && type.match?.maxLength != null && type.match.maxLength > 0 && column.maxLength != null) {
       if (column.maxLength <= type.match.maxLength) {
         score += 5
       }
