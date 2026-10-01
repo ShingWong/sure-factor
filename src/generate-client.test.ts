@@ -184,3 +184,39 @@ describe('generateClientComponent', () => {
     ).toThrow()
   })
 })
+describe('generateClientComponent: table components', () => {
+  it('emits a table renderer for data-table, not a form', () => {
+    const { module } = gen('CREATE TABLE t (email VARCHAR(255));', 'data-table')
+    expect(module).toContain('export function renderTable(')
+    expect(module).not.toContain('export function renderForm(')
+    // Built through the element factory rather than an HTML string.
+    expect(module).toContain("h('table'")
+    expect(module).toContain("scope: 'col'")
+    expect(module).toContain('"sure-table"')
+    expect(module).toContain('"sure-table__header"')
+    expect(module).toContain('"sure-table__cell"')
+  })
+
+  it('marks the selected row and exposes aria-selected', () => {
+    const { module } = gen('CREATE TABLE t (email VARCHAR(255));', 'data-table')
+    expect(module).toContain("'aria-selected'")
+    expect(module).toContain('is-selected')
+  })
+
+  it('renders an empty state rather than an empty table', () => {
+    const { module } = gen('CREATE TABLE t (email VARCHAR(255));', 'data-table')
+    expect(module).toContain("role: 'status'")
+    expect(module).toContain('Nothing here yet.')
+  })
+
+  it('emits table class names from the catalog, not form ones', () => {
+    const { module, cssClasses } = gen('CREATE TABLE t (email VARCHAR(255));', 'data-table')
+    expect(cssClasses.cell).toBe('sure-table__cell')
+    expect(module).not.toContain('"sure-form__field"')
+  })
+
+  it('still emits the element factory so both modules share one approach', () => {
+    const { module } = gen('CREATE TABLE t (email VARCHAR(255));', 'data-table')
+    expect(module).toContain('export function h<')
+  })
+})
