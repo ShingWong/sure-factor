@@ -37,9 +37,7 @@ behavior:
   autoFocus: true
   confirmBeforeCancel: true
 scripts:
-  - audio-feedback.js
   - voice-help.js
-  - notification-handler.js
 cssClasses:
   form: sure-modal__form
   field: sure-modal__field

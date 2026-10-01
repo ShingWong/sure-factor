@@ -1,6 +1,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { parseYaml } from './parse-yaml.js'
+import { loadAllTypesSync } from './match.js'
 
 describe('block scalars', () => {
   it('parses literal block scalar (|)', () => {
@@ -97,6 +98,68 @@ describe('block arrays of objects', () => {
       const text = readFileSync(`${dir}/${file}`, 'utf-8')
       const declared = (text.match(/^\s*-\s+[A-Za-z_$][\w$]*\s*:(?:\s|$)/gm) ?? []).length
       expect(countObjects(parseYaml(text)), `${file} dropped array items`).toBe(declared)
+    }
+  })
+})
+
+// Flow collections must only split on top-level commas. A regex quantifier
+// like {0,61} contains a comma, and a character class can contain a slash —
+// both previously truncated the value.
+describe('parseYaml flow collections', () => {
+  it('keeps a comma inside a regex quantifier within a flow mapping', () => {
+    const yaml = 'validation: { regex: "a{0,61}b", maxLength: 5 }'
+    expect((parseYaml(yaml) as any).validation.regex).toBe('a{0,61}b')
+  })
+
+  it('keeps an unquoted comma inside a quantifier', () => {
+    const yaml = 'validation: { regex: x{0,61}y, maxLength: 5 }'
+    expect((parseYaml(yaml) as any).validation.regex).toBe('x{0,61}y')
+  })
+
+  it('keeps a slash inside a character class', () => {
+    const yaml = "validation: { regex: '[a-zA-Z0-9.!#$%&*+/=?]+', maxLength: 5 }"
+    expect((parseYaml(yaml) as any).validation.regex).toBe('[a-zA-Z0-9.!#$%&*+/=?]+')
+  })
+
+  it('still splits ordinary pairs', () => {
+    const yaml = 'validation: { regex: abc, maxLength: 5 }'
+    expect((parseYaml(yaml) as any).validation).toEqual({ regex: 'abc', maxLength: 5 })
+  })
+
+  it('still splits inline arrays on top-level commas', () => {
+    expect((parseYaml('steps: [a, b, c]') as any).steps).toEqual(['a', 'b', 'c'])
+  })
+
+  it('round-trips the email catalog regex through a tier block', () => {
+    const yaml = [
+      'tiers:',
+      '  production:',
+      "    validation: { regex: ^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$, maxLength: 254 }",
+    ].join('\n')
+    const regex = ((parseYaml(yaml) as any).tiers.production.validation as any).regex
+    expect(regex).toBe(
+      "^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"
+    )
+    expect((parseYaml(yaml) as any).tiers.production.validation.maxLength).toBe(254)
+    expect(() => new RegExp(regex)).not.toThrow()
+  })
+})
+
+describe('parseYaml inline arrays with call arguments', () => {
+  it('keeps slice(0, maxLength) whole inside an inline array', () => {
+    expect((parseYaml('sanitize: [trim, slice(0, maxLength)]') as any).sanitize)
+      .toEqual(['trim', 'slice(0, maxLength)'])
+  })
+
+  it('still splits ordinary inline array items', () => {
+    expect((parseYaml('s: [a, b, c]') as any).s).toEqual(['a', 'b', 'c'])
+  })
+
+  it('keeps every catalog sanitisation step intact', () => {
+    for (const t of loadAllTypesSync()) {
+      for (const step of t.sanitize?.input ?? []) {
+        expect(Array.isArray(step), `${t.name} has a split step: ${JSON.stringify(step)}`).toBe(false)
+      }
     }
   })
 })

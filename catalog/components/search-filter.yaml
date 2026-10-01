@@ -36,9 +36,7 @@ behavior:
   autoFocus: true
   confirmBeforeCancel: false
 scripts:
-  - audio-feedback.js
   - voice-help.js
-  - notification-handler.js
 cssClasses:
   form: sure-search
   field: sure-search__input

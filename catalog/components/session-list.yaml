@@ -23,8 +23,6 @@ behavior:
   audio:
     errorBell: false
     successChime: false
-scripts:
-  - session-handler.js
 cssClasses:
   list: sure-session-list
   item: sure-session-item
