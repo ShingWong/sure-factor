@@ -235,3 +235,36 @@ describe('generateClientComponent: table cells accept nodes', () => {
     expect(module).toContain('emptyText')
   })
 })
+
+describe('generateClientComponent: form validation lives in the component', () => {
+  it('exports validateForm and sanitizeForm', () => {
+    const { module } = gen('CREATE TABLE t (email VARCHAR(255));')
+    expect(module).toContain('export function validateForm(')
+    expect(module).toContain('export function sanitizeForm(')
+  })
+
+  it('validates before submitting, and not after', () => {
+    const { module } = gen('CREATE TABLE t (email VARCHAR(255));')
+    const submit = module.slice(module.indexOf('onsubmit:'))
+    expect(submit).toContain('validateForm(spec, values)')
+    // The success path must run validation first. (`onSubmit` also appears
+    // earlier, in the `validate: false` escape hatch, so compare against the
+    // success branch specifically.)
+    const success = submit.slice(submit.indexOf('const found = validateForm'))
+    expect(success).toContain('Object.keys(found).length === 0')
+    expect(success.indexOf('validateForm')).toBeLessThan(success.indexOf('options.onSubmit'))
+  })
+
+  it('offers an escape hatch for draft saves', () => {
+    const { module } = gen('CREATE TABLE t (email VARCHAR(255));')
+    expect(module).toContain('options.validate === false')
+    expect(module).toContain('onInvalid?: (errors: Record<string, string>) => void')
+  })
+
+  it('carries the catalog error messages into the component', () => {
+    const { module } = gen('CREATE TABLE t (email VARCHAR(255));')
+    expect(module).toContain('field.hints?.error?.required')
+    expect(module).toContain('field.hints?.error?.format')
+    expect(module).toContain('must be valid JSON')
+  })
+})

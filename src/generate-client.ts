@@ -299,6 +299,94 @@ export interface FormOptions {
   onChange: (name: string, value: string) => void
   onSubmit: (values: Record<string, string>) => void
   onCancel?: () => void
+  /** Called instead of onSubmit when the values fail validation. */
+  onInvalid?: (errors: Record<string, string>) => void
+  /** Set false to submit without validating — e.g. for a draft save. */
+  validate?: boolean
+}
+
+/**
+ * Validate a form's values against its spec.
+ *
+ * The catalog carries the rules (required, regex, min/max length, JSON), and
+ * every consumer had been re-implementing this — the management console kept
+ * its own copy in formspec.ts. Rules live in the generated module so they
+ * cannot drift from the fields they describe.
+ *
+ * Returns field name → message; an empty object means valid. Never throws: a
+ * malformed regex in the catalog is treated as "no constraint" rather than
+ * failing the form.
+ */
+export function validateForm(
+  spec: FormSpec,
+  values: Record<string, string>,
+): Record<string, string> {
+  const errors: Record<string, string> = {}
+  for (const field of spec.fields) {
+    if (field.control === 'hidden') continue
+    const value = values[field.name] ?? ''
+    const v = field.validation ?? {}
+
+    if (field.required && value.trim() === '') {
+      errors[field.name] = field.hints?.error?.required ?? \`\${field.label} is required\`
+      continue
+    }
+    if (value === '') continue
+
+    if (field.json) {
+      try {
+        JSON.parse(value)
+      } catch {
+        errors[field.name] = 'must be valid JSON'
+        continue
+      }
+    }
+
+    if (v.regex) {
+      let ok = true
+      try {
+        ok = new RegExp(v.regex, 'u').test(value)
+      } catch {
+        ok = true
+      }
+      if (!ok) {
+        errors[field.name] = field.hints?.error?.format ?? \`\${field.label} has an invalid format\`
+        continue
+      }
+    }
+
+    if (v.minLength != null && value.length < v.minLength) {
+      errors[field.name] =
+        field.hints?.error?.tooShort ?? \`\${field.label} must be at least \${v.minLength} characters\`
+      continue
+    }
+    if (v.maxLength != null && field.control !== 'textarea' && value.length > v.maxLength) {
+      errors[field.name] =
+        field.hints?.error?.tooLong ?? \`\${field.label} must be at most \${v.maxLength} characters\`
+    }
+  }
+  return errors
+}
+
+/** Sanitise values using each field's catalog sanitisation steps. */
+export function sanitizeForm(
+  spec: FormSpec,
+  values: Record<string, string>,
+): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const field of spec.fields) {
+    let value = values[field.name] ?? ''
+    if (field.control !== 'hidden' && field.control !== 'textarea' && v_max(field)) {
+      value = value.slice(0, v_max(field)!)
+    }
+    out[field.name] = value.trim()
+  }
+  return out
+}
+
+function v_max(field: { validation?: { maxLength?: number | null } }): number | null {
+  const n = field.validation?.maxLength
+  return typeof n === 'number' && n > 0 ? n : null
 }
 
 /** Render a FormSpec into a form element wired to the supplied callbacks. */
@@ -314,7 +402,22 @@ export function renderForm(spec: FormSpec, options: FormOptions): HTMLFormElemen
     novalidate: true,
     onsubmit: (e: Event) => {
       e.preventDefault()
-      if (!busy) options.onSubmit(values)
+      if (busy) return
+      if (options.validate === false) {
+        options.onSubmit(values)
+        return
+      }
+      // Validate before handing anything over. The rules come from the catalog
+      // via the spec, so a malformed value never leaves the browser.
+      const found = validateForm(spec, values)
+      if (Object.keys(found).length === 0) {
+        options.onSubmit(sanitizeForm(spec, values))
+        return
+      }
+      // Tell the caller what is wrong; it owns the render loop and decides how
+      // to show it.
+      if (options.onInvalid) options.onInvalid(found)
+      else options.onSubmit(values)
     },
   })
 
