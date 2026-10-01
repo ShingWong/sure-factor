@@ -220,3 +220,18 @@ describe('generateClientComponent: table components', () => {
     expect(module).toContain('export function h<')
   })
 })
+
+describe('generateClientComponent: table cells accept nodes', () => {
+  it('appends a Node cell instead of stringifying it', () => {
+    const { module } = gen('CREATE TABLE t (email VARCHAR(255));', 'data-table')
+    expect(module).toContain('function appendCell(')
+    expect(module).not.toContain('cellText(')
+    // A Node-valued cell must be appended, not coerced to a string.
+    expect(module).toContain("'nodeType' in")
+  })
+
+  it('still renders a dash for empty values', () => {
+    const { module } = gen('CREATE TABLE t (email VARCHAR(255));', 'data-table')
+    expect(module).toContain('emptyText')
+  })
+})

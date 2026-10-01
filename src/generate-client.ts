@@ -424,10 +424,27 @@ export function h<K extends keyof HTMLElementTagNameMap>(
   return el
 }
 
-function cellText(value: unknown, emptyText: string): string {
-  if (value === null || value === undefined || value === '') return emptyText
-  if (Array.isArray(value)) return value.length > 0 ? value.join(', ') : emptyText
-  return String(value)
+/**
+ * A cell value may be a plain value (rendered as text), an array (joined), or
+ * a Node (appended as-is). Accepting Nodes matters because status badges and
+ * action buttons are elements, and stringifying one would put
+ * "[object HTMLElement]" in the table.
+ */
+function appendCell(td: HTMLElement, value: unknown, emptyText: string): void {
+  if (value === null || value === undefined || value === '') {
+    td.appendChild(document.createTextNode(emptyText))
+    return
+  }
+  if (Array.isArray(value)) {
+    const text = value.length > 0 ? value.join(', ') : emptyText
+    td.appendChild(document.createTextNode(text))
+    return
+  }
+  if (typeof value === 'object' && 'nodeType' in (value as Node)) {
+    td.appendChild(value as Node)
+    return
+  }
+  td.appendChild(document.createTextNode(String(value)))
 }
 
 export function renderTable(options: TableOptions): HTMLElement {
@@ -453,10 +470,11 @@ export function renderTable(options: TableOptions): HTMLElement {
         onclick: options.onRowClick ? () => options.onRowClick?.(row) : undefined,
         style: { cursor: options.onRowClick ? 'pointer' : '' },
       },
-        ...columns.map((c) =>
-          h('td', { class: ${JSON.stringify(cellClass)} },
-            cellText(row[c.name], c.emptyText ?? '\\u2014')),
-        ),
+        ...columns.map((c) => {
+          const td = h('td', { class: ${JSON.stringify(cellClass)} })
+          appendCell(td, row[c.name], c.emptyText ?? '\\u2014')
+          return td
+        }),
       )
       return tr
     }),
