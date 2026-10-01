@@ -48,5 +48,8 @@ cssClasses:
   error: sure-table__error
   help: sure-table__help
   label: sure-table__header
+  row: sure-table__row
+  cell: sure-table__cell
+  header: sure-table__header
 example:
   usage: Generate a sortable patient list table with columns for name, DOB, last visit, status, and assigned provider

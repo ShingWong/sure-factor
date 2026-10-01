@@ -42,5 +42,9 @@ cssClasses:
   error: sure-form__error
   help: sure-form__help
   label: sure-form__label
+  title: sure-form__title
+  actions: sure-form__actions
+  submit: btn-primary
+  cancel: btn-secondary
 example:
   usage: Generate a patient intake form with name, email, diagnosis, and ZIP code fields

@@ -13,6 +13,13 @@ export type { ColumnInfo, TableInfo, SchemaInfo } from './introspect.js'
 export { matchColumnToType, matchColumnToTypeSync, loadAllTypesSync, type TypeMatchResult } from './match.js'
 
 export { generateForTier, type GenerationTier, type GenerateOptions } from './generate.js'
+export {
+  generateClientComponent,
+  buildClientFields,
+  type ClientGenerateOptions,
+  type ClientComponentOutput,
+  type ClientFieldSpec,
+} from './generate-client.js'
 export { generateStore, type StoreGenerationOptions, type GeneratedStoreOutput, type SyncDirection } from './generate-store.js'
 export { sanitize, sanitizeInput, sanitizeOutput } from './sanitize.js'
 export { toYaml, toJson, fromJson, toMarkdown, toXml, fromXml, convert } from './serialize.js'
