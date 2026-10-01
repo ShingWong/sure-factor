@@ -40,9 +40,7 @@ behavior:
   autoFocus: false
   confirmBeforeCancel: false
 scripts:
-  - audio-feedback.js
   - voice-help.js
-  - notification-handler.js
 cssClasses:
   form: sure-table
   field: sure-table__cell

@@ -1,6 +1,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { parseYaml } from './parse-yaml.js'
+import { loadAllTypesSync } from './match.js'
 
 describe('block scalars', () => {
   it('parses literal block scalar (|)', () => {
@@ -141,5 +142,24 @@ describe('parseYaml flow collections', () => {
     )
     expect((parseYaml(yaml) as any).tiers.production.validation.maxLength).toBe(254)
     expect(() => new RegExp(regex)).not.toThrow()
+  })
+})
+
+describe('parseYaml inline arrays with call arguments', () => {
+  it('keeps slice(0, maxLength) whole inside an inline array', () => {
+    expect((parseYaml('sanitize: [trim, slice(0, maxLength)]') as any).sanitize)
+      .toEqual(['trim', 'slice(0, maxLength)'])
+  })
+
+  it('still splits ordinary inline array items', () => {
+    expect((parseYaml('s: [a, b, c]') as any).s).toEqual(['a', 'b', 'c'])
+  })
+
+  it('keeps every catalog sanitisation step intact', () => {
+    for (const t of loadAllTypesSync()) {
+      for (const step of t.sanitize?.input ?? []) {
+        expect(Array.isArray(step), `${t.name} has a split step: ${JSON.stringify(step)}`).toBe(false)
+      }
+    }
   })
 })

@@ -17,8 +17,6 @@ behavior:
     errorBell: false
     successChime: false
   voiceHelp: false
-scripts:
-  - markdown-renderer.js
 cssClasses:
   root: sure-markdown
   code: sure-markdown code

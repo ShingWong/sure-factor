@@ -13,6 +13,7 @@
 function splitFlowEntries(body: string, sep: string = ',', isMapping = false): string[] {
   const parts: string[] = []
   let depth = 0
+  let parenDepth = 0
   let quote: string | null = null
   let inCharClass = false
   let current = ''
@@ -70,7 +71,20 @@ function splitFlowEntries(body: string, sep: string = ',', isMapping = false): s
       current += ch
       continue
     }
-    if (ch === sep && depth === 0) {
+    // A function-call argument list may itself contain the separator, as in the
+    // sanitisation step `slice(0, maxLength)`. Track it so the call is kept
+    // whole.
+    if (ch === '(') {
+      parenDepth++
+      current += ch
+      continue
+    }
+    if (ch === ')') {
+      if (parenDepth > 0) parenDepth--
+      current += ch
+      continue
+    }
+    if (ch === sep && depth === 0 && parenDepth === 0) {
       // In a mapping, only split when the next non-space run is a bare key
       // followed by `:`. `{0,61}` and `[a,b]` do not match, so they stay whole.
       // In an array every top-level comma is structural.

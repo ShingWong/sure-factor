@@ -29,8 +29,6 @@ behavior:
     successChime: false
   voiceHelp: false
   autoFocus: true
-scripts:
-  - auth-handler.js
 cssClasses:
   form: sure-auth__form
   header: sure-auth__header

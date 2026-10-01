@@ -35,8 +35,6 @@ behavior:
     successChime: false
   voiceHelp: false
   autoFocus: true
-scripts:
-  - dialog-handler.js
 cssClasses:
   overlay: sure-dialog-overlay
   dialog: sure-dialog
