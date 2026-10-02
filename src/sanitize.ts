@@ -114,7 +114,19 @@ type SanitizeStep =
   | { slice: [number, number?] }
 
 function parseStep(step: string): { fn: (s: string) => string } | null {
-  const paramMatch = step.match(/^(\w+)\(([^)]*)\)$/)
+  // Two spellings reach here. A step written as a plain YAML string keeps its
+  // call form (`slice(0, 10)`), but a parameterised step written as a mapping
+  // (`- normalize: NFKC`) parses to an object, and both generators flatten that
+  // to `name: arg`. Accepting only the call form meant every catalog recipe
+  // with a mapping — `normalize: NFKC` in date-iso, date-us, ein, email —
+  // shipped unsanitised, with only a console warning to say so.
+  let normalised = step
+  if (normalised.includes(": ") && !normalised.includes("(")) {
+    const name = normalised.slice(0, normalised.indexOf(": ")).trim()
+    const args = normalised.slice(normalised.indexOf(": ") + 2)
+    normalised = `${name}(${args})`
+  }
+  const paramMatch = normalised.match(/^(\w+)\(([^)]*)\)$/)
   if (paramMatch) {
     const name = paramMatch[1]!
     const args = paramMatch[2]!.split(',').map(s => s.trim()).filter(Boolean)

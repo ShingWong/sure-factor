@@ -55,6 +55,32 @@ export function sanitizeStepLiteral(step: unknown): string {
 }
 
 /**
+ * Flatten a catalog type's `sanitize.input` into the `string[]` that
+ * `sanitize()` takes.
+ *
+ * A bare step stays as it is (`trim`, `slice(0, 254)` — note the comma inside
+ * the parentheses, which must survive intact). A parameterised step written as
+ * a YAML mapping (`- normalize: NFKC`) parses to an object and becomes the
+ * call form `normalize(NFKC)`.
+ *
+ * An empty or absent list still yields `['trim']`, so a form always returns
+ * something rather than passing raw input through.
+ */
+export function sanitizeStepList(input: unknown): string[] {
+  if (!Array.isArray(input)) return ['trim']
+  const steps = input.map((step) => {
+    if (typeof step === 'string') return step.trim() === '' ? null : step
+    if (step && typeof step === 'object' && !Array.isArray(step)) {
+      const [name, arg] = Object.entries(step as Record<string, unknown>)[0] ?? []
+      if (typeof name !== 'string' || name === '' || arg == null) return null
+      return `${name}(${String(arg)})`
+    }
+    return null
+  }).filter((s): s is string => s !== null)
+  return steps.length > 0 ? steps : ['trim']
+}
+
+/**
  * Render a Map of key → chained calls as the body of a JavaScript object
  * literal, with every entry comma-separated so the result parses.
  */
