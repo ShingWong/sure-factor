@@ -94,9 +94,33 @@ describe('sanitize pipeline', () => {
     expect(result).toBe('test')
   })
 
+  // The catalog writes parameterised steps in YAML as mappings, which parse to
+  // objects and are flattened to `name: arg`. Both generators emit that form,
+  // so it is the spelling that actually reaches sanitize() at runtime — and it
+  // used to be ignored, silently. Every catalog recipe containing a
+  // parameterised step (`normalize: NFKC` in date-iso, date-us, ein, email)
+  // shipped unsanitised because of it.
+  it('accepts the catalog spelling `name: arg`', () => {
+    expect(sanitize('\uFF34est', ['normalize: NFKC', 'lowercase'])).toBe('test')
+  })
+
+  it('treats the two spellings of a parameterised step identically', () => {
+    // Full-width digits, the case NFKC exists to fold.
+    const wide = '\uFF12\uFF10\uFF12\uFF16-\uFF10\uFF11-\uFF10\uFF12'
+    for (const steps of [['normalize: NFKC'], ['normalize(NFKC)']]) {
+      expect(sanitize(wide, steps), steps[0]).toBe('2026-01-02')
+    }
+  })
+
   it('handles slice with parameter', () => {
     const result = sanitize('hello world', ['trim', 'slice(0,5)'])
     expect(result).toBe('hello')
+  })
+
+  it('accepts slice written as a catalog mapping with several arguments', () => {
+    // `- slice(0, 10)` stays a string in YAML; a mapping form may carry more
+    // than one argument, and must not be split on the comma.
+    expect(sanitize('hello world', ['slice: 0, 5'])).toBe('hello')
   })
 
   it('skips unknown steps', () => {

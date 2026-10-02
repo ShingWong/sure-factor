@@ -1,8 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { writeFileSync, unlinkSync } from 'node:fs'
+import { writeFileSync, unlinkSync, readFileSync, mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join as joinPath } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { createRequire } from 'node:module'
 import { introspectSchemaFromDdl } from './introspect.js'
 import { generateClientComponent } from './generate-client.js'
+import { sanitize } from './sanitize.js'
 
 const require = createRequire(import.meta.url)
 
@@ -266,5 +270,111 @@ describe('generateClientComponent: form validation lives in the component', () =
     expect(module).toContain('field.hints?.error?.required')
     expect(module).toContain('field.hints?.error?.format')
     expect(module).toContain('must be valid JSON')
+  })
+})
+
+/**
+ * The generated `sanitizeForm` is the one piece of this output a consumer runs
+ * on every keystroke, and a test that only reads its source cannot tell whether
+ * it does anything. Earlier it trimmed and stopped — every catalog sanitisation
+ * step was silently dropped, so `stripControl` let control characters through an
+ * email field. These tests compile the emitted module and call the real
+ * function.
+ */
+describe('generateClientComponent: the emitted sanitiser actually sanitises', () => {
+  /** Compile the emitted module with tsc, then evaluate the JavaScript. */
+  async function load(module: string): Promise<{ sanitizeForm: (s: unknown, v: unknown) => Record<string, string> }> {
+    const dir = mkdtempSync(joinPath(tmpdir(), 'sure-factor-gen-'))
+    const src = joinPath(dir, 'mod.ts')
+    try {
+      writeFileSync(src, module)
+      const spawnSync = require('node:child_process').spawnSync as typeof import('node:child_process').spawnSync
+      const tsc = new URL('../node_modules/.bin/tsc', import.meta.url).pathname
+      const res = spawnSync(tsc, [
+        '--outDir', dir,
+        '--skipLibCheck',
+        '--target', 'es2022',
+        '--module', 'esnext',
+        '--lib', 'es2022,dom',
+        '--strict',
+        src,
+      ], { encoding: 'utf-8' })
+      const log = `${res.stdout ?? ''}${res.stderr ?? ''}`
+      if (res.status !== 0) {
+        throw new Error(`tsc rejected the emitted module:\n${log.split('\n').slice(0, 6).join('\n')}`)
+      }
+      // tsc emits mod.js for an ESM target; rename so Node loads it as a module.
+      const compiled = joinPath(dir, 'mod.mjs')
+      writeFileSync(compiled, readFileSync(joinPath(dir, 'mod.js'), 'utf8'))
+      return (await import(pathToFileURL(compiled).href)) as never
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  }
+
+  const spec = (field: Record<string, unknown>) => ({
+    id: 't', title: 'T', fields: [{ name: 'f', label: 'F', help: '', required: false, control: 'text', type: 'text', validation: {}, hints: {}, sanitize: ['trim'], source: null, ...field }],
+  })
+
+  it('applies the catalog steps it is given', async () => {
+    const { module } = gen('CREATE TABLE t (email VARCHAR(255));')
+    const { sanitizeForm } = await load(module)
+    // email's catalog recipe: trim, lowercase, normalize: NFKC, stripControl, slice.
+    // A NUL and a BEL: the sort of characters stripControl exists to remove.
+    const out = sanitizeForm(spec({ sanitize: ['trim', 'lowercase', 'stripControl'] }), { f: '  ADA\u0000\u0007@Example.COM  ' })
+    expect(out.f).toBe('ada@example.com')
+  })
+
+  it('runs a parameterised step, which the catalog writes as a mapping', async () => {
+    const { module } = gen('CREATE TABLE t (email VARCHAR(255));')
+    const { sanitizeForm } = await load(module)
+    const out = sanitizeForm(spec({ sanitize: ['trim', 'normalize(NFKC)'] }), { f: '  ＡＤＡ  ' })
+    expect(out.f).toBe('ADA')
+  })
+
+  it('ignores a step it does not know rather than blanking the value', async () => {
+    const { module } = gen('CREATE TABLE t (email VARCHAR(255));')
+    const { sanitizeForm } = await load(module)
+    const out = sanitizeForm(spec({ sanitize: ['trim', 'someFutureStep'] }), { f: '  keep me  ' })
+    expect(out.f).toBe('keep me')
+  })
+
+  it('trims a field whose spec declares no steps', async () => {
+    const { module } = gen('CREATE TABLE t (email VARCHAR(255));')
+    const { sanitizeForm } = await load(module)
+    expect(sanitizeForm(spec({ sanitize: [] }), { f: '  x  ' }).f).toBe('x')
+  })
+
+  it('caps at maxLength, but not for a textarea', async () => {
+    const { module } = gen('CREATE TABLE t (email VARCHAR(255));')
+    const { sanitizeForm } = await load(module)
+    const field = { sanitize: ['trim'], validation: { maxLength: 3 } }
+    expect(sanitizeForm(spec(field), { f: 'abcdef' }).f).toBe('abc')
+    expect(sanitizeForm(spec({ ...field, control: 'textarea' }), { f: 'abcdef' }).f).toBe('abcdef')
+  })
+
+  it('leaves a hidden field alone', async () => {
+    const { module } = gen('CREATE TABLE t (email VARCHAR(255));')
+    const { sanitizeForm } = await load(module)
+    const out = sanitizeForm(spec({ control: 'hidden', sanitize: ['trim', 'lowercase'] }), { f: '  ID  ' })
+    expect(out.f).toBe('  ID  ')
+  })
+
+  it('agrees with sure-factor\'s own sanitize() on the same steps', async () => {
+    // The generated copy is duplicated to keep the module dependency-free, so
+    // it can drift. Compare the two on every step the catalog actually uses.
+    const { module } = gen('CREATE TABLE t (email VARCHAR(255));')
+    const { sanitizeForm } = await load(module)
+    const steps = [
+      'trim', 'lowercase', 'uppercase', 'collapseWhitespace', 'stripNonDigits',
+      'stripControl', 'stripDirectionOverrides', 'stripZeroWidth', 'htmlEscape',
+      'normalize(NFKC)', 'slice(0, 5)',
+    ]
+    const samples = ['  Ada Lovelace  ', '\uFF21\uFF24\uFF21', 'a\u0007bc', '(555) 123-4567', '<b>hi</b>']
+    for (const sample of samples) {
+      const mine = sanitizeForm(spec({ sanitize: steps }), { f: sample }).f
+      const theirs = sanitize(sample, steps)
+      expect(mine, `${JSON.stringify(sample)} via ${steps.join(',')}`).toBe(theirs)
+    }
   })
 })

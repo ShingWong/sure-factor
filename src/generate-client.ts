@@ -16,7 +16,7 @@ import type { SchemaInfo, ColumnInfo } from './introspect.js'
 import type { CatalogType, CatalogComponent } from './types.js'
 import { matchColumnToTypeSync, loadAllTypesSync } from './match.js'
 import { parseYaml } from './parse-yaml.js'
-import { uniqueKey } from './generate-internal.js'
+import { sanitizeStepList, uniqueKey } from './generate-internal.js'
 import type { GenerationTier } from './generate.js'
 
 export interface ClientGenerateOptions {
@@ -118,9 +118,7 @@ export function buildClientFields(
           minLength: validation.minLength ?? null,
           maxLength: validation.maxLength ?? null,
         },
-        sanitize: (type.sanitize?.input ?? []).map((s) =>
-          typeof s === 'string' ? s : `${Object.entries(s as Record<string, unknown>)[0]?.[0] ?? ''}: ${String(Object.values(s as Record<string, unknown>)[0] ?? '')}`,
-        ),
+        sanitize: sanitizeStepList(type.sanitize?.input),
         // Mirrors the server-side FormSpec: help text and placeholder live
         // under \`hints\`, not at the top level.
         help: hints.help ?? '',
@@ -368,20 +366,69 @@ export function validateForm(
   return errors
 }
 
-/** Sanitise values using each field's catalog sanitisation steps. */
+/**
+ * Sanitise values using each field's catalog sanitisation steps.
+ *
+ * The steps come from the FormSpec, so they are the same ones the server
+ * applies. An unknown step is skipped rather than throwing, and a field with
+ * none declared still gets trimmed.
+ */
 export function sanitizeForm(
   spec: FormSpec,
   values: Record<string, string>,
 ): Record<string, string> {
   const out: Record<string, string> = {}
   for (const field of spec.fields) {
-    let value = values[field.name] ?? ''
-    if (field.control !== 'hidden' && field.control !== 'textarea' && v_max(field)) {
-      value = value.slice(0, v_max(field)!)
+    if (field.control === 'hidden') {
+      out[field.name] = values[field.name] ?? ''
+      continue
     }
-    out[field.name] = value.trim()
+    let value = values[field.name] ?? ''
+    // maxLength bounds the stored value; \`slice\` in the catalog's own recipe
+    // does too, but only where the recipe asks for it. A textarea is exempt so
+    // a long entry is not silently truncated.
+    for (const step of field.sanitize?.length ? field.sanitize : ['trim']) {
+      value = applyStep(value, step)
+    }
+    const max = v_max(field)
+    if (max && field.control !== 'textarea') {
+      value = value.slice(0, max)
+    }
+    out[field.name] = value
   }
   return out
+}
+
+/**
+ * One sanitisation step, duplicated here rather than imported so the generated
+ * module stays dependency-free. A step it does not know is a no-op: the
+ * catalog may name one a future version adds, and that should not blank a
+ * user's input.
+ */
+function applyStep(value: string, step: string): string {
+  const call = step.match(/^(\\w+)\\(([^)]*)\\)$/)
+  if (call) {
+    const args = call[2].split(',').map((a) => a.trim()).filter(Boolean)
+    switch (call[1]) {
+      case 'normalize': return value.normalize(args[0] ?? 'NFKC')
+      case 'slice': return value.slice(Number(args[0] ?? 0), args[1] !== undefined ? Number(args[1]) : undefined)
+      default: break
+    }
+  }
+  switch (step) {
+    case 'trim': return value.trim()
+    case 'lowercase': return value.toLowerCase()
+    case 'uppercase': return value.toUpperCase()
+    case 'htmlEscape': return value
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#x2F;')
+    case 'stripNonDigits': return value.replace(/\\D/g, '')
+    case 'collapseWhitespace': return value.replace(/\\s+/g, ' ').trim()
+    case 'stripControl': return value.replace(/[\\u0000-\\u001F\\u007F-\\u009F]/g, '')
+    case 'stripDirectionOverrides': return value.replace(/[\\u202A-\\u202E\\u2066-\\u2069]/g, '')
+    case 'stripZeroWidth': return value.replace(/[\\u200B-\\u200D\\uFEFF]/g, '')
+    default: return value
+  }
 }
 
 function v_max(field: { validation?: { maxLength?: number | null } }): number | null {
