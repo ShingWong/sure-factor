@@ -52,6 +52,7 @@
   "files": [
     "dist",
     "catalog",
+    ".opencode/skills",
     "CHANGELOG.md",
     "!dist/**/*.test.*"
   ],

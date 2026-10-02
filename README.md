@@ -331,6 +331,31 @@ const formatted = await formatGeneratedOutput(output)
 | Audio | `catalog/assets/audio/` | Error bell, success chime, voice help (JS audio generators) |
 | Themes | `catalog/assets/themes/{nord,forest,dracula}.css` | Production CSS themes |
 | Lookup data | `catalog/assets/data/{icd10-codes,us-zip-codes}.json` | Validation datasets |
+| Agent skill | `.opencode/skills/sure-factor/SKILL.md` | How an agent should drive this package |
+
+## Agent skill
+
+The package ships an [OpenCode](https://opencode.ai) skill covering the parts of
+this API that are not obvious from the signatures — scoping the DDL before
+introspecting it, taking columns out of the schema rather than constructing
+them, reading the catalog YAML instead of dumping the loader, and editing the
+spec rather than the generated output.
+
+Point OpenCode at it from your `opencode.json`:
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "skills": ["./node_modules/@shing.wong/sure-factor/.opencode/skills"]
+}
+```
+
+Only the skill's name and description are loaded up front; the body is read when
+the agent decides the skill applies. Its claims are executed by this package's
+test suite, so it cannot drift from the code without a test failing.
+
+It is plain Markdown — copy it anywhere you prefer to keep instructions, or
+point the `skills` array at any local directory or HTTP catalog.
 
 ## Related Projects
 
