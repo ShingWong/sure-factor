@@ -176,3 +176,51 @@ describe('matchColumnToTypeSync: length alone cannot select a type', () => {
     }
   })
 })
+
+/**
+ * The obvious first call to this function is a bare column name, because
+ * "which type is this column?" is the whole question it answers. That threw a
+ * `TypeError` from inside the scoring loop — `column.columnName.toLowerCase()`
+ * on a string — which told a caller nothing about what was expected.
+ */
+describe('matchColumnToTypeSync: accepts a bare column name', () => {
+  it('matches a name with no ColumnInfo', () => {
+    const types = loadAllTypesSync()
+    expect(matchColumnToTypeSync('email', types)!.type.name).toBe('email')
+    expect(matchColumnToTypeSync('ssn', types)!.type.name).toBe('ssn')
+  })
+
+  it('agrees with the full ColumnInfo when the name is unambiguous', () => {
+    const types = loadAllTypesSync()
+    const column = (columnName: string, dataType: string, maxLength: number | null): ColumnInfo => ({
+      columnName, dataType, isNullable: true, maxLength, defaultValue: null, isPrimaryKey: false, foreignKey: null,
+    })
+    for (const name of ['email', 'ssn', 'phone', 'zip']) {
+      const bare = matchColumnToTypeSync(name, types)
+      const full = matchColumnToTypeSync(column(name, 'varchar', 255), types)
+      expect(bare?.type.name, name).toBe(full?.type.name)
+    }
+  })
+
+  it('returns null rather than guessing when a data_type rule is the only match', () => {
+    // A name alone carries no data type, so a type whose only rule is on
+    // data_type must not be selected — otherwise every name would match it.
+    const types = loadAllTypesSync()
+    const result = matchColumnToTypeSync('created_at', types)
+    expect(result?.type.name ?? 'text').toBe('text')
+  })
+
+  it('explains itself when given something that is not a column', () => {
+    const types = loadAllTypesSync()
+    // The message has to name the fix, not just the type.
+    for (const bad of [null, undefined, '', 42, {}]) {
+      expect(() => matchColumnToTypeSync(bad as never, types)).toThrow(/ColumnInfo from the schema/)
+    }
+  })
+
+  it('tolerates a partial ColumnInfo rather than failing mid-loop', () => {
+    const types = loadAllTypesSync()
+    // { columnName } with no dataType read `.toLowerCase()` on undefined.
+    expect(matchColumnToTypeSync({ columnName: 'email' } as never, types)!.type.name).toBe('email')
+  })
+})

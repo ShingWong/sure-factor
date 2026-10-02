@@ -104,7 +104,52 @@ export function loadAllTypesSync(): CatalogType[] {
   return types
 }
 
-export function matchColumnToTypeSync(column: ColumnInfo, types: CatalogType[], tier: 'vibe' | 'prototype' | 'production' = 'production'): TypeMatchResult | null {
+/**
+ * Find the catalog type that best describes a column.
+ *
+ * `column` accepts a bare name as a convenience, because "which type is this
+ * column?" is the whole question this answers and passing a string is the
+ * obvious thing to try. A string carries no data type, so it is matched on name
+ * alone — if the catalog has a rule keyed on `data_type` and the caller's column
+ * name does not identify a type on its own, the answer is `null` rather than a
+ * guess. Pass a `ColumnInfo` when you have one.
+ *
+ * Throws a named error rather than failing inside the matcher: a `TypeError` on
+ * `column.columnName` told an agent nothing about what was expected.
+ */
+export function matchColumnToTypeSync(
+  column: ColumnInfo | string,
+  types: CatalogType[],
+  tier: 'vibe' | 'prototype' | 'production' = 'production',
+): TypeMatchResult | null {
+  let info: ColumnInfo =
+    typeof column === 'string'
+      ? {
+          columnName: column,
+          // No data type is available from a bare name, and an empty one is how
+          // the data_type rules below are told to stand down.
+          dataType: '',
+          isNullable: true,
+          maxLength: null,
+          defaultValue: null,
+          isPrimaryKey: false,
+          foreignKey: null,
+        }
+      : column
+
+  if (!info || typeof info.columnName !== 'string' || info.columnName === '') {
+    throw new TypeError(
+      'matchColumnToTypeSync needs a column: a name, or a ColumnInfo from the schema. ' +
+        'Take it from the schema rather than building one: ' +
+        "schema.tables[0].columns.find(c => c.columnName === 'email').",
+    )
+  }
+
+  // A partial ColumnInfo is a plausible thing to construct by hand, and the
+  // rules below read dataType and maxLength without checking. Fill the gaps
+  // rather than failing on `undefined.toLowerCase()` deep in a scoring loop.
+  if (typeof info.dataType !== 'string') info = { ...info, dataType: '' }
+
   const scored: Array<{ type: CatalogType; score: number }> = []
 
   for (const type of types) {
@@ -117,7 +162,7 @@ export function matchColumnToTypeSync(column: ColumnInfo, types: CatalogType[], 
       const likeMatch = pattern.match(/LIKE\s+'%([^']+)%'/i)
       if (likeMatch) {
         const keyword = likeMatch[1]!.toLowerCase()
-        if (column.columnName.toLowerCase().includes(keyword)) {
+        if (info.columnName.toLowerCase().includes(keyword)) {
           score += keyword.length * 3
         }
       }
@@ -125,7 +170,10 @@ export function matchColumnToTypeSync(column: ColumnInfo, types: CatalogType[], 
       const typeMatch = pattern.match(/data_type\s+IN\s+\(([^)]+)\)/i)
       if (typeMatch && !likeMatch) {
         const matchedTypes = typeMatch[1]!.split(',').map(s => s.trim().replace(/'/g, '').toLowerCase())
-        if (matchedTypes.includes(column.dataType.toLowerCase())) {
+        // A bare string carries no data type, so a data_type rule must not fire
+        // on it — otherwise every type with such a rule would match whatever
+        // name the caller passed.
+        if (info.dataType !== '' && matchedTypes.includes(info.dataType.toLowerCase())) {
           score += 3
         }
       }
@@ -136,8 +184,8 @@ export function matchColumnToTypeSync(column: ColumnInfo, types: CatalogType[], 
     // short enough to fit: `plan VARCHAR(40)` matched `email` (maxLength 254)
     // even though email's rule requires an email-ish name, and five types tied
     // on that bonus so the winner depended on array order.
-    if (score > 0 && type.match?.maxLength != null && type.match.maxLength > 0 && column.maxLength != null) {
-      if (column.maxLength <= type.match.maxLength) {
+    if (score > 0 && type.match?.maxLength != null && type.match.maxLength > 0 && info.maxLength != null) {
+      if (info.maxLength <= type.match.maxLength) {
         score += 5
       }
     }
