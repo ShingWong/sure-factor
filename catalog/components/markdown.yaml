@@ -17,6 +17,10 @@ behavior:
     errorBell: false
     successChime: false
   voiceHelp: false
+sure_ui:
+  - markdown
+  - form
+  - buttons
 cssClasses:
   root: sure-markdown
   code: sure-markdown code

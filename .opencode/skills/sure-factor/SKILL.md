@@ -106,6 +106,25 @@ validation strictness for less code.
 Use `vibe` for a throwaway, `production` for anything that stores a value. The
 default is `production`; pass the tier explicitly when you mean something else.
 
+## `styles` is sure-ui compose, `notifications` is gated on the mode
+
+`generateForTier` returns two output fields whose shape depends on the
+component yaml, not on guesswork:
+
+- **`styles`** is [`@shing.wong/sure-ui`](https://github.com/ShingWong/sure-ui)
+  `compose()` output over the yaml's `sure_ui: [blocks]` — tokens plus the
+  blocks the markup needs, in cascade layers. Do not add a second stylesheet
+  on top: consumer CSS is unlayered and wins over the theme regardless of
+  specificity, which pins the page to one palette (see below). The registry
+  test (`src/registry.test.ts`) keeps `sure_ui` in step with both the yaml's
+  `cssClasses` and sure-ui's `COMPONENTS`.
+- **`notifications`** is the `showNotification`/`clearNotifications` runtime
+  source — present (`string`) only when `behavior.notificationModes`
+  declares a non-inline mode (`toast`, `statusBar`, `sidePanel`), `null`
+  otherwise. Write it to `notifications.js` when present; an inline-only
+  component needs no runtime, and shipping one invites imports that are
+  never called.
+
 ## Edit the spec, regenerate; never edit generated code
 
 Generated modules are large because they are complete: a 7-field form is 16,856

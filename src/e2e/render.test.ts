@@ -33,6 +33,11 @@ describe('E2E: generated form renders correctly', () => {
     const gen = generateForTier(schema, { tier: 'production', component: 'form', locale: 'en' })
     const i18nData = gen.i18n
 
+    // The form carries class="sure-form" exactly as generateTemplate emits it
+    // (formClass = cssClasses.form ?? 'sure-form'): compose styles the input
+    // through the `.sure-form input` descendant rule, and dropping the
+    // ancestor silently falls back to the generic 4px rule — the fixture must
+    // mirror what the generator ships, or it tests a page nobody generates.
     const fields = table.columns
       .filter(c => c.columnName !== 'id')
       .map(col => {
@@ -54,10 +59,11 @@ describe('E2E: generated form renders correctly', () => {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Patient Form — E2E</title>
+<style>${gen.styles}</style>
 </head>
 <body style="padding:2rem;font-family:sans-serif">
 <h1>Patient Registration</h1>
-<form hx-post="/api/patients" hx-target="this" hx-swap="outerHTML" novalidate>
+<form class="sure-form" hx-post="/api/patients" hx-target="this" hx-swap="outerHTML" novalidate>
 ${fields}
 <button type="submit" class="btn-primary">Submit</button>
 </form>
@@ -109,6 +115,36 @@ ${fields}
       expect(await page.inputValue('input[name="email"]')).toBe('test@example.com')
       await page.fill('input[name="zip"]', '90210')
       expect(await page.inputValue('input[name="zip"]')).toBe('90210')
+    } finally {
+      await page.close()
+    }
+  })
+
+  it('composed styles actually style the page in a real browser', { timeout: 15000 }, async () => {
+    // The whole point of shipping compose() output: the theme's tokens must
+    // resolve and the block rules must beat browser defaults. Nord's
+    // --field token is #fff and its input rule rounds to 6px — the UA
+    // default is a 2px grey bevel, so both assertions can only pass if the
+    // generated stylesheet loaded and applied.
+    const page = await getPage()
+    try {
+      const probe = await page.evaluate(() => {
+        const input = document.querySelector('input[name="email"]') as HTMLInputElement
+        const btn = document.querySelector('.btn-primary') as HTMLElement
+        const cs = getComputedStyle(input)
+        return {
+          field: cs.backgroundColor,
+          radius: cs.borderRadius,
+          btnBg: getComputedStyle(btn).backgroundColor,
+          layer: [...document.styleSheets].some((s) => {
+            try { return (s.cssRules[0]?.cssText ?? '').startsWith('@layer sure.tokens,') } catch { return false }
+          }),
+        }
+      })
+      expect(probe.layer, 'layer statement must be the first rule').toBe(true)
+      expect(probe.field, 'input must use the theme --field token').toBe('rgb(255, 255, 255)')
+      expect(probe.radius, 'compose input rule must round to 6px').toBe('6px')
+      expect(probe.btnBg, 'btn-primary must take the theme primary').toBe('rgb(129, 161, 193)')
     } finally {
       await page.close()
     }

@@ -46,6 +46,9 @@ behavior:
   confirmBeforeCancel: true
 scripts:
   - voice-help.js
+sure_ui:
+  - crud
+  - buttons
 cssClasses:
   form: sure-crud
   field: sure-crud__field

@@ -37,6 +37,9 @@ behavior:
   confirmBeforeCancel: false
 scripts:
   - voice-help.js
+sure_ui:
+  - search
+  - buttons
 cssClasses:
   form: sure-search
   field: sure-search__input

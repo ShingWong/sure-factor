@@ -38,6 +38,9 @@ behavior:
   confirmBeforeCancel: true
 scripts:
   - voice-help.js
+sure_ui:
+  - modal
+  - buttons
 cssClasses:
   form: sure-modal__form
   field: sure-modal__field

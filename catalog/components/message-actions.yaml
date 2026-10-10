@@ -15,6 +15,10 @@ behavior:
 audio:
     errorBell: false
     successChime: false
+sure_ui:
+  - sessions
+  - form
+  - buttons
 cssClasses:
   actionsContainer: msg-actions
   actionButton: msg-actions button

@@ -16,6 +16,10 @@ behavior:
   audio:
     errorBell: false
     successChime: false
+sure_ui:
+  - menu
+  - form
+  - buttons
 cssClasses:
   menu: sure-menu
   item: sure-menu__item

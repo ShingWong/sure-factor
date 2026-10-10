@@ -35,6 +35,10 @@ behavior:
     successChime: false
   voiceHelp: false
   autoFocus: true
+sure_ui:
+  - dialog
+  - form
+  - buttons
 cssClasses:
   overlay: sure-dialog-overlay
   dialog: sure-dialog

@@ -29,6 +29,9 @@ behavior:
     successChime: false
   voiceHelp: false
   autoFocus: true
+sure_ui:
+  - auth
+  - buttons
 cssClasses:
   form: sure-auth__form
   header: sure-auth__header

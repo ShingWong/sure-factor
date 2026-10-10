@@ -73,10 +73,18 @@ export interface CatalogComponent {
   behavior?: ComponentBehavior
   scripts?: string[]
   cssClasses?: Record<string, string>
+  /**
+   * sure-ui component families this component's generated markup needs
+   * styled (e.g. ['form', 'buttons']). `generateStyles` composes exactly
+   * these blocks; the registry test guards the list against sure-ui's
+   * COMPONENTS export so a class declared in `cssClasses` can never outgrow
+   * the blocks shipped to style it.
+   */
+  sure_ui?: string[]
 }
 
 export interface CatalogAsset {
   name: string
-  type: 'audio' | 'i18n' | 'data' | 'theme'
+  type: 'audio' | 'i18n' | 'data'
   path: string
 }
