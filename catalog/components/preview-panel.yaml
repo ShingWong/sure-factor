@@ -15,6 +15,9 @@ behavior:
 audio:
     errorBell: false
     successChime: false
+sure_ui:
+  - form
+  - buttons
 cssClasses:
   panel: preview-panel
   header: preview-panel__header

@@ -127,7 +127,8 @@ const output = generateForTier(schema, { tier: 'production', component: 'form' }
 //     routes: "app.post('/patients', ...)",
 //     template: "<form class='sure-form'>...",
 //     i18n: { email_placeholder: 'user@example.com', ... },
-//     styles: ".sure-form { max-width: 480px; }...",
+//     styles: "@layer sure.tokens, ... sure-ui compose [form, buttons]...",
+//     notifications: "…showNotification() runtime… | null (inline-only)",
 //     validation: "z.string().regex(/^[a-zA-Z0-9.../).max(254)",
 //     sanitization: "[trim, lowercase, normalize(NFKC), ...]"
 //   }
@@ -235,7 +236,7 @@ Generation progresses through three quality tiers — same schema, different out
 | Audio | None | Error bell | Chime + speech |
 | Security | Param queries | + CSRF | + Encryption + audit |
 | State sync | — | — | sure-state + versioning |
-| CSS themes | None | Pure CSS | Nord / Forest / Dracula |
+| CSS themes | sure-ui compose (7 themes) | sure-ui compose (7 themes) | sure-ui compose (7 themes) |
 
 ## Sanitization Pipeline
 
@@ -329,9 +330,12 @@ const formatted = await formatGeneratedOutput(output)
 |-------|------|-------------|
 | i18n | `catalog/assets/i18n/{en,es,fr}.json` | Locale strings for components |
 | Audio | `catalog/assets/audio/` | Error bell, success chime, voice help (JS audio generators) |
-| Themes | `catalog/assets/themes/{nord,forest,dracula}.css` | Production CSS themes |
 | Lookup data | `catalog/assets/data/{icd10-codes,us-zip-codes}.json` | Validation datasets |
 | Agent skill | `.opencode/skills/sure-factor/SKILL.md` | How an agent should drive this package |
+
+Theme CSS is not vendored: `styles` is composed on demand from
+[`@shing.wong/sure-ui`](https://github.com/ShingWong/sure-ui) — pass any of
+its seven themes via `generateForTier(schema, { theme: 'forest' })`.
 
 ## Agent skill
 

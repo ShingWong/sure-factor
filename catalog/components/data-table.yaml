@@ -41,6 +41,9 @@ behavior:
   confirmBeforeCancel: false
 scripts:
   - voice-help.js
+sure_ui:
+  - table
+  - buttons
 cssClasses:
   form: sure-table
   field: sure-table__cell

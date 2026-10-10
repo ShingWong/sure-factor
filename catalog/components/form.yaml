@@ -35,6 +35,9 @@ behavior:
 scripts:
   - error-bell.js
   - voice-help.js
+sure_ui:
+  - form
+  - buttons
 cssClasses:
   form: sure-form
   field: sure-form__field

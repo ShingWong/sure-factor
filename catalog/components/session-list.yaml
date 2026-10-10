@@ -23,6 +23,10 @@ behavior:
   audio:
     errorBell: false
     successChime: false
+sure_ui:
+  - sessions
+  - form
+  - buttons
 cssClasses:
   list: sure-session-list
   item: sure-session-item
