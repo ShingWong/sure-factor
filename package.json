@@ -84,7 +84,7 @@
     "database-schema"
   ],
   "dependencies": {
-    "@shing.wong/sure-ui": "github:ShingWong/sure-ui#e7ff27413f99f3f0e6aa542ed751f4833fb9a1f0",
+    "@shing.wong/sure-ui": "^0.2.0",
     "pg": "^8.23.0",
     "prettier": "^3.9.6"
   },
