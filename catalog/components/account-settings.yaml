@@ -1,0 +1,70 @@
+name: account-settings
+description: Email account profile form — address, incoming/outgoing server settings (host, port, TLS, user) and authentication method
+tier: production
+parameters:
+  fields:
+    - name: email
+      type: email
+      required: true
+    - name: incomingHost
+      type: text
+      required: true
+    - name: incomingPort
+      type: number
+      required: true
+    - name: incomingTls
+      type: boolean
+      required: false
+    - name: incomingUser
+      type: text
+      required: false
+    - name: outgoingHost
+      type: text
+      required: true
+    - name: outgoingPort
+      type: number
+      required: true
+    - name: outgoingTls
+      type: boolean
+      required: false
+    - name: authMethod
+      type: text
+      required: true
+  submitLabel:
+    en: Save Account
+    es: Guardar cuenta
+    fr: Enregistrer le compte
+  cancelLabel:
+    en: Cancel
+    es: Cancelar
+    fr: Annuler
+behavior:
+  notificationModes:
+    - inline
+    - toast
+    - statusBar
+  audio:
+    errorBell: true
+    successChime: true
+  voiceHelp: false
+  autoFocus: true
+  confirmBeforeCancel: true
+scripts:
+  - error-bell.js
+  - success-chime.js
+sure_ui:
+  - form
+  - buttons
+cssClasses:
+  form: sure-form
+  field: sure-form__field
+  input: sure-form__input
+  error: sure-form__error
+  help: sure-form__help
+  label: sure-form__label
+  title: sure-form__title
+  actions: sure-form__actions
+  submit: btn-primary
+  cancel: btn-secondary
+example:
+  usage: Generate an IMAP/SMTP account settings form with email address, incoming host/port/TLS/user, outgoing host/port/TLS and auth method
