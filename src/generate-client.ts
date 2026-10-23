@@ -315,9 +315,11 @@ export function renderField(
 
   const parts: HTMLElement[] = [label, control]
   if (field.help || field.hints?.help) {
+    // The same sentence can arrive in both places (a generated spec carries the
+    // help at the top level and under hints); show it once.
+    const helpText = [...new Set([field.help, field.hints?.help].filter(Boolean))].join(' \\u2014 ')
     parts.push(
-      h('div', { class: ${JSON.stringify(helpClass)}, id: \`\${id}-help\` },
-        [field.help, field.hints?.help].filter(Boolean).join(' \\u2014 ')),
+      h('div', { class: ${JSON.stringify(helpClass)}, id: \`\${id}-help\` }, helpText),
     )
   }
   if (error) {

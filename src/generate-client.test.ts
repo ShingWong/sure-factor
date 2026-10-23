@@ -433,4 +433,10 @@ Motor Vehicle Record fee.';
     expect(result.module).toContain('field.inputType')
     expect(result.module).toContain('class: "sure-form__input"')
   })
+
+  it('shows help once when the same text arrives at both levels', () => {
+    // A generated spec carries the help at the top level and under hints, and
+    // the renderer used to concatenate both.
+    expect(result.module).toContain('new Set([field.help, field.hints?.help]')
+  })
 })
