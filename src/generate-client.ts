@@ -32,7 +32,10 @@ export interface ClientFieldSpec {
   help: string
   required: boolean
   control: 'text' | 'password' | 'select' | 'textarea'
+  /** HTML input type, derived from the column's SQL type and catalog type. */
+  inputType: 'text' | 'email' | 'number' | 'date' | 'password' | 'tel'
   type: string
+  options?: string[]
   readOnly: boolean
   secret: boolean
   json: boolean
@@ -64,19 +67,41 @@ function loadComponent(name: string): CatalogComponent | null {
   }
 }
 
-function inputTypeForColumn(col: ColumnInfo): string {
+function inputTypeForColumn(col: ColumnInfo, type: CatalogType): ClientFieldSpec['inputType'] {
+  if (type.name === 'password') return 'password'
+  if (type.name === 'email') return 'email'
+  // Phone numbers are text input with a tel keyboard, never a spinner.
+  if (type.name === 'us-phone' || type.name === 'intl-phone') return 'tel'
+
   const dt = col.dataType.toLowerCase()
-  if (dt === 'boolean') return 'checkbox'
-  if (dt === 'date' || dt === 'timestamp' || dt === 'timestamptz') return 'date'
-  if (['integer', 'bigint', 'smallint', 'serial', 'bigserial', 'numeric', 'decimal', 'real', 'double'].includes(dt)) return 'number'
+  if (dt === 'date') return 'date'
+  // Precision-qualified spellings (`NUMERIC(12,2)`) reach here unchanged, so
+  // match the family rather than an exact list.
+  if (/^(?:integer|bigint|smallint|tinyint|serial|bigserial|numeric|decimal|real|double)\b/.test(dt)) return 'number'
   return 'text'
 }
 
 function controlFor(col: ColumnInfo, type: CatalogType): ClientFieldSpec['control'] {
   if (type.name === 'password') return 'password'
   if (/^(jsonb?|json)$/i.test(col.dataType)) return 'textarea'
-  if (inputTypeForColumn(col) === 'checkbox') return 'text'
+  // A CHECK (x IN (…)) constraint is an enumeration: render a select.
+  if (col.enumValues && col.enumValues.length > 0) return 'select'
   return 'text'
+}
+
+/**
+ * Split a `COMMENT ON COLUMN` into label and help.
+ *
+ * Convention: the first line is the label a person should read, anything after
+ * it is help. A comment with no label line is ignored, so `comment` never
+ * becomes an accidental label.
+ */
+function labelFromComment(comment: string | null | undefined): { label: string | null; help: string | null } {
+  if (!comment) return { label: null, help: null }
+  const [first, ...rest] = comment.split('\n').map((line) => line.trim())
+  const label = first && first !== '' ? first : null
+  const help = rest.join(' ').trim()
+  return { label, help: help === '' ? null : help }
 }
 
 /**
@@ -104,11 +129,17 @@ export function buildClientFields(
       const key = uniqueKey(seen, table.tableName, column.columnName)
       const validation = type.validation ?? {}
       const hints = type.hints?.en ?? {}
+      const fromComment = labelFromComment(column.comment)
+      const help = [fromComment.help, hints.help ?? ''].filter(Boolean).join(' — ')
       const spec: ClientFieldSpec = {
         name: key,
-        label: column.columnName.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()),
+        // A column comment is the DDL's own words for the field; fall back to
+        // the mechanical snake_case → Sentence case derivation.
+        label: fromComment.label ?? column.columnName.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()),
         control: controlFor(column, type),
+        inputType: inputTypeForColumn(column, type),
         type: type.name,
+        ...(column.enumValues && column.enumValues.length > 0 ? { options: [...column.enumValues] } : {}),
         required: !column.isNullable,
         readOnly: column.isPrimaryKey === true,
         secret: false,
@@ -121,10 +152,10 @@ export function buildClientFields(
         sanitize: sanitizeStepList(type.sanitize?.input),
         // Mirrors the server-side FormSpec: help text and placeholder live
         // under \`hints\`, not at the top level.
-        help: hints.help ?? '',
+        help,
         hints: {
           placeholder: hints.placeholder ?? '',
-          help: hints.help ?? '',
+          help,
           error: hints.error ?? {},
         },
         source: { table: table.tableName, column: column.columnName },
@@ -178,6 +209,8 @@ export interface FieldSpec {
   help: string
   required: boolean
   control: 'text' | 'password' | 'select' | 'textarea' | 'hidden'
+  /** HTML input type when the control is a text or password input. */
+  inputType?: 'text' | 'email' | 'number' | 'date' | 'password' | 'tel'
   type: string
   options?: string[]
   readOnly?: boolean
@@ -241,6 +274,7 @@ export function renderField(
 
   const common: Record<string, unknown> = {
     id,
+    class: ${JSON.stringify(inputClass)},
     name: field.name,
     value: field.control === 'select' ? value || (field.options?.[0] ?? '') : value,
     required: field.required,
@@ -269,7 +303,10 @@ export function renderField(
   } else if (field.control === 'textarea') {
     control = h('textarea', { ...common, rows: 5, spellcheck: 'false' })
   } else {
-    const type = field.control === 'password' ? 'password' : (field.type === 'email' ? 'email' : 'text')
+    // The HTML input type comes from the column's SQL type and catalog type,
+    // so a money column is a number input and a date is a date picker rather
+    // than a text box the browser cannot help with.
+    const type = field.control === 'password' ? 'password' : (field.inputType ?? 'text')
     control = h('input', { ...common, type })
   }
 

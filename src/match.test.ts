@@ -162,7 +162,8 @@ describe('matchColumnToTypeSync: length alone cannot select a type', () => {
   it('still matches a name a type claims, even when the length also fits', () => {
     const types = loadAllTypesSync()
     expect(matchColumnToTypeSync(column('email', 'varchar', 255), types, 'production')!.type.name).toBe('email')
-    expect(matchColumnToTypeSync(column('signup_date', 'date', null), types, 'production')!.type.name).toBe('date-us')
+    // A real DATE column is ISO-validated; date-us is for MM/DD/YYYY text.
+    expect(matchColumnToTypeSync(column('signup_date', 'date', null), types, 'production')!.type.name).toBe('date-iso')
   })
 
   it('does not let a length bonus create a match at all', () => {
@@ -195,9 +196,12 @@ describe('matchColumnToTypeSync: accepts a bare column name', () => {
     const column = (columnName: string, dataType: string, maxLength: number | null): ColumnInfo => ({
       columnName, dataType, isNullable: true, maxLength, defaultValue: null, isPrimaryKey: false, foreignKey: null,
     })
+    // Widths a real column would have: a 255-character "phone" is not a phone,
+    // so the catalogue is expected to disagree on that one.
+    const widths: Record<string, number> = { email: 255, ssn: 11, phone: 15, zip: 5 }
     for (const name of ['email', 'ssn', 'phone', 'zip']) {
       const bare = matchColumnToTypeSync(name, types)
-      const full = matchColumnToTypeSync(column(name, 'varchar', 255), types)
+      const full = matchColumnToTypeSync(column(name, 'varchar', widths[name]!), types)
       expect(bare?.type.name, name).toBe(full?.type.name)
     }
   })
@@ -222,5 +226,46 @@ describe('matchColumnToTypeSync: accepts a bare column name', () => {
     const types = loadAllTypesSync()
     // { columnName } with no dataType read `.toLowerCase()` on undefined.
     expect(matchColumnToTypeSync({ columnName: 'email' } as never, types)!.type.name).toBe('email')
+  })
+})
+
+describe('matching honours the data_type a rule declares', () => {
+  const types = loadAllTypesSync()
+  const column = (columnName: string, dataType: string, maxLength: number | null = null): ColumnInfo => ({
+    columnName,
+    dataType,
+    isNullable: true,
+    maxLength,
+    defaultValue: null,
+    isPrimaryKey: false,
+    foreignKey: null,
+  })
+
+  it('does not put an MM/DD/YYYY rule on a timestamp named like a date', () => {
+    // The name contains "date"; the type is not varchar(10).
+    const result = matchColumnToTypeSync(column('updated_at', 'TIMESTAMPTZ'), types, 'production')
+    expect(result?.type.name ?? 'text').not.toBe('date-us')
+  })
+
+  it('matches a real DATE column to the ISO type', () => {
+    expect(matchColumnToTypeSync(column('signup_date', 'date'), types, 'production')!.type.name).toBe('date-iso')
+  })
+
+  it('keeps the US-phone rule on phone-width columns only', () => {
+    expect(matchColumnToTypeSync(column('home_phone', 'varchar', 15), types, 'production')!.type.name).toBe('us-phone')
+    expect(matchColumnToTypeSync(column('home_phone', 'varchar', 200), types, 'production')!.type.name).not.toBe('us-phone')
+  })
+
+  it('does not read "account" as a credit-card column', () => {
+    for (const name of ['account_number', 'po_present_acct', 'payoff_balance']) {
+      const result = matchColumnToTypeSync(column(name, 'numeric'), types, 'production')
+      expect(result?.type.name ?? 'text', name).not.toBe('credit-card')
+    }
+  })
+
+  it('still matches a genuinely named card column', () => {
+    for (const name of ['card_number', 'credit_card', 'cc_number']) {
+      expect(matchColumnToTypeSync(column(name, 'varchar', 19), types, 'production')!.type.name, name).toBe('credit-card')
+    }
   })
 })

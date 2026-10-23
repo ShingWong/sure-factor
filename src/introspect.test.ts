@@ -416,3 +416,80 @@ describe('introspectSchema argument validation', () => {
     expect(closed).toBe(false)
   })
 })
+describe('introspectSchemaFromDdl: comments are documentation, not schema', () => {
+  it('ignores line comments inside a table body', () => {
+    const ddl = `CREATE TABLE contracts (
+      id BIGINT PRIMARY KEY,
+      -- the schedule (anchored on the effective date, in days)
+      effective_on DATE NOT NULL,
+      paid_at TIMESTAMPTZ -- trailing note
+    );`
+    const schema = introspectSchemaFromDdl(ddl)
+    const names = schema.tables[0]!.columns.map((c) => c.columnName)
+    expect(names).toEqual(['id', 'effective_on', 'paid_at'])
+  })
+
+  it('ignores block comments and commented-out statements', () => {
+    const ddl = `/* the whole file is commented in places
+       CREATE TABLE ghost (nope INTEGER); */
+    CREATE TABLE live (
+      id INTEGER,
+      /* inline */ email VARCHAR(255) NOT NULL
+    );`
+    const schema = introspectSchemaFromDdl(ddl)
+    expect(schema.tables.map((t) => t.tableName)).toEqual(['live'])
+    expect(schema.tables[0]!.columns.map((c) => c.columnName)).toEqual(['id', 'email'])
+  })
+
+  it('keeps comment markers that live inside a string literal', () => {
+    const ddl = `CREATE TABLE notes (id INTEGER, body TEXT DEFAULT 'a -- not a comment');`
+    const schema = introspectSchemaFromDdl(ddl)
+    expect(schema.tables[0]!.columns).toHaveLength(2)
+    expect(schema.tables[0]!.columns[1]!.defaultValue).toBe("'a -- not a comment'")
+  })
+})
+
+describe('introspectSchemaFromDdl: COMMENT ON supplies the UI words', () => {
+  const ddl = `CREATE TABLE contracts (
+      mvr NUMERIC(12,2) NOT NULL,
+      ssn VARCHAR(11),
+      note TEXT
+    );
+    COMMENT ON COLUMN contracts.mvr IS 'MVR';
+    COMMENT ON COLUMN contracts.ssn IS 'SSN / Tax ID
+    Social Security Number or Tax ID (XX-XXXXXXX).';`
+
+  it('attaches a column comment to the column', () => {
+    const schema = introspectSchemaFromDdl(ddl)
+    const mvr = schema.tables[0]!.columns.find((c) => c.columnName === 'mvr')!
+    expect(mvr.comment).toBe('MVR')
+  })
+
+  it('keeps a multi-line comment intact for label + help', () => {
+    const schema = introspectSchemaFromDdl(ddl)
+    const ssn = schema.tables[0]!.columns.find((c) => c.columnName === 'ssn')!
+    expect(ssn.comment).toContain('SSN / Tax ID')
+    expect(ssn.comment).toContain('XX-XXXXXXX')
+  })
+
+  it('leaves uncommented columns alone', () => {
+    const schema = introspectSchemaFromDdl(ddl)
+    const note = schema.tables[0]!.columns.find((c) => c.columnName === 'note')!
+    expect(note.comment ?? null).toBeNull()
+  })
+})
+
+describe('introspectSchemaFromDdl: CHECK … IN becomes an enumeration', () => {
+  it('reads the values in declaration order', () => {
+    const ddl = `CREATE TABLE contracts (
+      loan_type VARCHAR(10) NOT NULL DEFAULT 'commercial'
+                CHECK (loan_type IN ('commercial', 'personal')),
+      plan VARCHAR(10 CHECK (plan = 'x'))
+    );`
+    const schema = introspectSchemaFromDdl(ddl)
+    const loanType = schema.tables[0]!.columns.find((c) => c.columnName === 'loan_type')!
+    expect(loanType.enumValues).toEqual(['commercial', 'personal'])
+    const plan = schema.tables[0]!.columns.find((c) => c.columnName === 'plan')!
+    expect(plan.enumValues ?? null).toBeNull()
+  })
+})

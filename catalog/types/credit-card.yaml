@@ -1,7 +1,9 @@
 name: credit-card
 description: Credit card number (stored as masked last 4 digits only)
 match:
-  sql: column_name LIKE '%cc%' OR column_name LIKE '%card%' OR column_name LIKE '%credit%'
+  # Deliberately not `%cc%`: that matches "account" and "acct", turning a money
+  # or account-number column into a card field. Card columns are named.
+  sql: column_name LIKE '%card%' OR column_name LIKE '%credit%' OR column_name LIKE '%cc_num%' OR column_name LIKE '%ccnum%' OR column_name LIKE 'cc_%'
   regex: ^\d{13,19}$
   maxLength: 19
 validation:

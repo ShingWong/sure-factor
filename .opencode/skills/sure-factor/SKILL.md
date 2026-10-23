@@ -125,6 +125,24 @@ component yaml, not on guesswork:
   component needs no runtime, and shipping one invites imports that are
   never called.
 
+## Put the words in the schema, not in a fork
+
+A column's `COMMENT ON COLUMN` is where its UI words belong: **the first line
+is the label, anything after it is help**. Without a comment the label is
+derived mechanically (`payment_amount` → "Payment amount"), which is fine for
+`email` and wrong for `MVR` or `Tax ID`.
+
+```sql
+COMMENT ON COLUMN contracts.mvr IS 'MVR
+Motor Vehicle Record fee.';
+```
+
+The generator reads the column's SQL type for the control: `numeric`/`integer`
+→ number input, `date` → date picker (ISO), plus the catalog type for email,
+password and phone. A `CHECK (x IN (…))` becomes a `<select>` with those
+options. If a field needs a control the schema cannot express, extend the
+catalog — do not post-process the generated module.
+
 ## Edit the spec, regenerate; never edit generated code
 
 Generated modules are large because they are complete: a 7-field form is 16,856

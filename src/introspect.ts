@@ -6,6 +6,10 @@ export interface ColumnInfo {
   defaultValue: string | null
   isPrimaryKey: boolean
   foreignKey: { table: string; column: string } | null
+  /** `COMMENT ON COLUMN …` text, when the DDL declares one. */
+  comment?: string | null
+  /** Values from a `CHECK (column IN (…))` constraint, in declaration order. */
+  enumValues?: string[] | null
 }
 
 export interface TableInfo {
@@ -230,6 +234,111 @@ function findOpenParen(ddl: string, from: number): number {
 }
 
 /**
+ * Remove SQL comments (`-- …` and `/* … *\/`) while leaving string literals and
+ * quoted identifiers untouched.
+ *
+ * A DDL file is documentation as much as schema, so comments sit next to the
+ * columns they explain. Without this pass a comment line is read as a column
+ * definition — and one containing a parenthesis swallows the column that
+ * follows it, because the block scanner balances parens.
+ */
+function stripSqlComments(ddl: string): string {
+  let out = ''
+  let i = 0
+  while (i < ddl.length) {
+    const ch = ddl[i]!
+
+    if (ch === "'" || ch === '"') {
+      const quote = ch
+      out += ch
+      i++
+      while (i < ddl.length) {
+        out += ddl[i]!
+        if (ddl[i] === quote) {
+          if (ddl[i + 1] === quote) {
+            out += ddl[i + 1]!
+            i += 2
+            continue
+          }
+          i++
+          break
+        }
+        i++
+      }
+      continue
+    }
+
+    if (ch === '-' && ddl[i + 1] === '-') {
+      while (i < ddl.length && ddl[i] !== '\n') i++
+      continue
+    }
+
+    if (ch === '/' && ddl[i + 1] === '*') {
+      i += 2
+      // Keep newlines so line structure survives; drop everything else.
+      while (i < ddl.length && !(ddl[i] === '*' && ddl[i + 1] === '/')) {
+        if (ddl[i] === '\n') out += '\n'
+        i++
+      }
+      i += 2
+      continue
+    }
+
+    out += ch
+    i++
+  }
+  return out
+}
+
+/** Parse the values of a `CHECK (column IN (…))` constraint, if present. */function parseEnumValues(rest: string): string[] | null {
+  const match = /CHECK\s*\(\s*(?:"(?:[^"]|"")*"|[A-Za-z_][\w$]*)\s+IN\s*\(([^)]*)\)\s*\)/i.exec(rest)
+  if (!match) return null
+  const values = match[1]!
+    .split(',')
+    .map((part) => part.trim())
+    .map((part) => (/^'(?:[^']|'')*'$/.test(part) ? part.slice(1, -1).replace(/''/g, "'") : part))
+    .filter((part) => part !== '')
+  return values.length > 0 ? values : null
+}
+
+/**
+ * Attach `COMMENT ON COLUMN table.column IS '…'` text to the parsed columns.
+ *
+ * A comment is where a DDL keeps the words a person reads: the label and its
+ * help. Convention for UI use — the **first line is the label**, anything after
+ * it is help text.
+ */
+function attachColumnComments(ddl: string, tables: TableInfo[]): void {
+  const byTable = new Map(tables.map((t) => [t.tableName, t]))
+  const qualified = new RegExp(
+    `COMMENT\\s+ON\\s+COLUMN\\s+(${IDENT})\\s*\\.\\s*(${IDENT})\\s*\\.\\s*(${IDENT})\\s+IS\\s+('(?:[^']|'')*')`,
+    'gi',
+  )
+  const plain = new RegExp(
+    `COMMENT\\s+ON\\s+COLUMN\\s+(${IDENT})\\s*\\.\\s*(${IDENT})\\s+IS\\s+('(?:[^']|'')*')`,
+    'gi',
+  )
+  const unquoteLiteral = (literal: string) => literal.slice(1, -1).replace(/''/g, "'")
+
+  const apply = (tableName: string, columnName: string, literal: string) => {
+    const table = byTable.get(tableName.toLowerCase())
+    if (!table) return
+    const column = table.columns.find((c) => c.columnName.toLowerCase() === columnName.toLowerCase())
+    if (!column) return
+    column.comment = unquoteLiteral(literal)
+  }
+
+  // Qualified statements (`schema.table.column`) first; the plain pattern would
+  // otherwise read `table` as the schema and `column` as the table.
+  for (const match of ddl.matchAll(qualified)) {
+    apply(unquoteIdent(match[2]!), unquoteIdent(match[3]!), match[4]!)
+  }
+  for (const match of ddl.matchAll(plain)) {
+    apply(unquoteIdent(match[1]!), unquoteIdent(match[2]!), match[3]!)
+  }
+}
+
+/**
  * Read a balanced parenthesised block starting at `start` (which must index the
  * opening paren), skipping over string and quoted-identifier literals.
  *
@@ -389,7 +498,10 @@ function splitColumnDef(trimmed: string): { name: string; type: string; rest: st
   return { name, type, rest }
 }
 
-export function introspectSchemaFromDdl(ddl: string): SchemaInfo {
+export function introspectSchemaFromDdl(rawDdl: string): SchemaInfo {
+  // Comments are documentation, not schema: strip them first so a `--` note
+  // beside a column stays a note (and a commented-out statement is ignored).
+  const ddl = stripSqlComments(rawDdl)
   const tables: TableInfo[] = []
   // Quoted identifiers are matched and unquoted, so names like "user data" or
   // "User" survive. The column block is read with balanced-paren scanning, and
@@ -509,11 +621,22 @@ export function introspectSchemaFromDdl(ddl: string): SchemaInfo {
         ? { table: unquoteIdent(fkMatch[1]!).toLowerCase(), column: unquoteIdent(fkMatch[2]!).toLowerCase() }
         : null
 
-      columns.push({ columnName: colName, dataType, isNullable, maxLength, defaultValue, isPrimaryKey, foreignKey })
+      columns.push({
+        columnName: colName,
+        dataType,
+        isNullable,
+        maxLength,
+        defaultValue,
+        isPrimaryKey,
+        foreignKey,
+        comment: null,
+        enumValues: parseEnumValues(parsed.rest),
+      })
     }
 
     tables.push({ tableName, schema: schema ?? 'public', columns })
   }
 
+  attachColumnComments(ddl, tables)
   return { tables }
 }
