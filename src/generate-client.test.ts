@@ -378,3 +378,65 @@ describe('generateClientComponent: the emitted sanitiser actually sanitises', ()
     }
   })
 })
+
+describe('generateClientComponent: controls match the column, not a text box', () => {
+  const DDL_TYPED = `
+CREATE TABLE contracts (
+  contract_number BIGINT PRIMARY KEY,
+  premium NUMERIC(12,2) NOT NULL,
+  term_months SMALLINT NOT NULL,
+  effective_on DATE NOT NULL,
+  contact_email VARCHAR(255),
+  home_phone VARCHAR(15),
+  loan_type VARCHAR(10) NOT NULL DEFAULT 'commercial' CHECK (loan_type IN ('commercial', 'personal')),
+  mvr NUMERIC(12,2) NOT NULL
+);
+COMMENT ON COLUMN contracts.mvr IS 'MVR
+Motor Vehicle Record fee.';
+`
+  const result = generateClientComponent(introspectSchemaFromDdl(DDL_TYPED), {
+    tier: 'production',
+    component: 'form',
+    exportName: 'ContractForm',
+  })
+  const field = (name: string) => result.fields.find((f) => f.name === name)!
+
+  it('gives money and counts a number input', () => {
+    expect(field('premium').inputType).toBe('number')
+    expect(field('term_months').inputType).toBe('number')
+  })
+
+  it('gives a DATE column a date input', () => {
+    expect(field('effective_on').inputType).toBe('date')
+  })
+
+  it('gives email and phone their own input types', () => {
+    expect(field('contact_email').inputType).toBe('email')
+    expect(field('home_phone').inputType).toBe('tel')
+  })
+
+  it('renders an enumeration as a select with its values', () => {
+    expect(field('loan_type').control).toBe('select')
+    expect(field('loan_type').options).toEqual(['commercial', 'personal'])
+  })
+
+  it('uses the column comment as label and help', () => {
+    expect(field('mvr').label).toBe('MVR')
+    expect(field('mvr').help).toContain('Motor Vehicle Record fee.')
+  })
+
+  it('falls back to the derived label when there is no comment', () => {
+    expect(field('contract_number').label).toBe('Contract number')
+  })
+
+  it('emits the input type and the catalog class into the module', () => {
+    expect(result.module).toContain('field.inputType')
+    expect(result.module).toContain('class: "sure-form__input"')
+  })
+
+  it('shows help once when the same text arrives at both levels', () => {
+    // A generated spec carries the help at the top level and under hints, and
+    // the renderer used to concatenate both.
+    expect(result.module).toContain('new Set([field.help, field.hints?.help]')
+  })
+})

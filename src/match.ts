@@ -38,35 +38,9 @@ export async function matchColumnToType(column: ColumnInfo, tier: 'vibe' | 'prot
   const scored: Array<{ type: CatalogType; score: number }> = []
 
   for (const type of types) {
-    let score = 0
+    let score = scoreType(type, column)
 
-    if (!type.match?.sql) continue
-    const patterns = type.match.sql.split('OR').map(s => s.trim())
-
-    let hasPatternMatch = false
-    for (const pattern of patterns) {
-      const likeMatch = pattern.match(/LIKE\s+'%([^']+)%'/i)
-      if (likeMatch) {
-        const keyword = likeMatch[1]!.toLowerCase()
-        if (column.columnName.toLowerCase().includes(keyword)) {
-          score += keyword.length * 3
-          hasPatternMatch = true
-        }
-      }
-
-      const typeMatch = pattern.match(/data_type\s+IN\s+\(([^)]+)\)/i)
-      if (typeMatch && !hasPatternMatch) {
-        const types = typeMatch[1]!.split(',').map(s => s.trim().replace(/'/g, '').toLowerCase())
-        if (types.includes(column.dataType.toLowerCase())) {
-          score += 3
-          hasPatternMatch = true
-        }
-      }
-    }
-
-    if (!hasPatternMatch) continue
-
-    if (type.match?.maxLength != null && type.match.maxLength > 0 && column.maxLength != null) {
+    if (score > 0 && type.match?.maxLength != null && type.match.maxLength > 0 && column.maxLength != null) {
       if (column.maxLength <= type.match.maxLength) {
         score += 5
       }
@@ -89,6 +63,79 @@ export async function matchColumnToType(column: ColumnInfo, tier: 'vibe' | 'prot
   const confidence = maxPossible > 0 ? best.score / maxPossible : 0
 
   return { type: best.type, confidence }
+}
+
+/**
+ * Does a catalog `data_type` claim fit this column?
+ *
+ * Catalog rules are written against SQL types as a person writes them
+ * (`varchar(15)`, `date`, `text`), while introspection reports
+ * `dataType: 'varchar'` plus a separate `maxLength`. Comparing the two
+ * literally meant a rule like `us-phone`'s never fired on a real column.
+ * `varchar(N)` is read as "fits N characters", which is how the catalog uses it
+ * (`us-phone` lists both 15 and 20).
+ */
+function matchesDataType(claim: string, info: ColumnInfo): boolean {
+  const spec = claim.trim().toLowerCase().replace(/\s+/g, ' ')
+  // An unknown data type (a bare column name was passed) cannot disqualify a
+  // rule — the caller simply does not have that information.
+  if (info.dataType === '') return true
+
+  const varcharLength = /^varchar\s*\(\s*(\d+)\s*\)$/.exec(spec)
+  if (varcharLength) {
+    const limit = Number(varcharLength[1])
+    if (info.dataType.toLowerCase() !== 'varchar') return false
+    return info.maxLength == null || info.maxLength <= limit
+  }
+
+  return info.dataType.toLowerCase() === spec
+}
+
+/**
+ * Score one catalog type against a column.
+ *
+ * A rule branch that names a `data_type` must satisfy it: a name match alone is
+ * not enough. That is what kept `date-us` (MM/DD/YYYY text) attached to
+ * `TIMESTAMPTZ` columns whose name happens to contain "date", and it is why a
+ * phone column of any width used to claim the narrow US-phone rule.
+ */
+function scoreType(type: CatalogType, info: ColumnInfo): number {
+  if (!type.match?.sql) return 0
+
+  let score = 0
+  for (const rawPattern of type.match.sql.split(/\bOR\b/)) {
+    const pattern = rawPattern.trim()
+    if (!pattern) continue
+
+    const likeMatch = /LIKE\s+'%([^']+)%'/i.exec(pattern)
+    // One level of nesting: `IN ('varchar(20)', 'varchar(15)')` — a plain
+    // `[^)]+` stops at the `)` inside the first type name.
+    const inMatch = /data_type\s+IN\s*\(([^()]*(?:\([^()]*\)[^()]*)*)\)/i.exec(pattern)
+    const eqMatch = /data_type\s*=\s*'([^']+)'/i.exec(pattern)
+
+    const claimsType = inMatch !== null || eqMatch !== null
+    if (!likeMatch && !claimsType) continue
+
+    // A bare column name carries no data type. A type-only branch cannot be
+    // confirmed, so it must not fire; a branch that also names the column can
+    // still match on the name alone.
+    if (claimsType && info.dataType === '' && !likeMatch) continue
+
+    const typeOk = inMatch
+      ? inMatch[1]!.split(',').map((s) => s.trim().replace(/'/g, '')).some((t) => matchesDataType(t, info))
+      : eqMatch
+        ? matchesDataType(eqMatch[1]!, info)
+        : true
+    if (!typeOk) continue
+
+    if (likeMatch) {
+      const keyword = likeMatch[1]!.toLowerCase()
+      if (!info.columnName.toLowerCase().includes(keyword)) continue
+      score += keyword.length * 3
+    }
+    if (claimsType) score += 3
+  }
+  return score
 }
 
 export function loadAllTypesSync(): CatalogType[] {
@@ -153,31 +200,7 @@ export function matchColumnToTypeSync(
   const scored: Array<{ type: CatalogType; score: number }> = []
 
   for (const type of types) {
-    let score = 0
-
-    if (!type.match?.sql) continue
-    const patterns = type.match.sql.split('OR').map(s => s.trim())
-
-    for (const pattern of patterns) {
-      const likeMatch = pattern.match(/LIKE\s+'%([^']+)%'/i)
-      if (likeMatch) {
-        const keyword = likeMatch[1]!.toLowerCase()
-        if (info.columnName.toLowerCase().includes(keyword)) {
-          score += keyword.length * 3
-        }
-      }
-
-      const typeMatch = pattern.match(/data_type\s+IN\s+\(([^)]+)\)/i)
-      if (typeMatch && !likeMatch) {
-        const matchedTypes = typeMatch[1]!.split(',').map(s => s.trim().replace(/'/g, '').toLowerCase())
-        // A bare string carries no data type, so a data_type rule must not fire
-        // on it — otherwise every type with such a rule would match whatever
-        // name the caller passed.
-        if (info.dataType !== '' && matchedTypes.includes(info.dataType.toLowerCase())) {
-          score += 3
-        }
-      }
-    }
+    let score = scoreType(type, info)
 
     // The maxLength rule only breaks ties between types that already matched on
     // name or data type. Awarding it on its own let any type claim any column

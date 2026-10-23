@@ -19,6 +19,7 @@ CREATE TABLE emails (
 );
 CREATE TABLE person_roles (
   role_name VARCHAR(100) NOT NULL,
+  email VARCHAR(255) NOT NULL,
   updated_at TIMESTAMPTZ
 );
 `
@@ -96,9 +97,11 @@ describe('generateForTier: validation is parseable', () => {
 
   it('qualifies colliding column names by table so no validator is lost', () => {
     const { validation } = generate(MULTI_TABLE_DDL)
-    // `updated_at` exists in three tables; each occurrence must survive.
-    const updatedAt = validation.split('\n').filter((l) => l.includes('updated_at'))
-    expect(updatedAt.length, 'a validator was silently dropped for a repeated column name').toBeGreaterThanOrEqual(3)
+    // `email` exists in three tables; each occurrence must survive. (`updated_at`
+    // is no longer a validator case: a TIMESTAMPTZ is not a catalogue type, so
+    // it correctly falls back to an unvalidated text field.)
+    const email = validation.split('\n').filter((l) => l.includes('email'))
+    expect(email.length, 'a validator was silently dropped for a repeated column name').toBeGreaterThanOrEqual(3)
   })
 
   it('keeps sanitization parseable too', () => {

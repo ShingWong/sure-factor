@@ -3,6 +3,59 @@
 All notable changes to this package are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-10-23
+
+### Fixed — the generated UI now matches the schema it came from
+
+Six defects found while building a real application (sun-portal) from a real
+DDL file. Each one produced output that compiled, passed the existing tests,
+and was wrong in the browser.
+
+- **A `--` comment inside a table body was parsed as a column.** A comment
+  containing a parenthesis swallowed the column after it, because the block
+  scanner balances parens. Comments (`-- …` and `/* … */`) are now stripped
+  before parsing, with string literals and quoted identifiers left intact, so
+  a commented-out statement is ignored too.
+
+- **A catalog rule's `data_type` clause was ignored once the column name
+  matched.** `date-us` (MM/DD/YYYY text) attached itself to `TIMESTAMPTZ`
+  columns whose name contains "date", and any phone-named column claimed the
+  narrow US-phone rule regardless of width. A branch that names a `data_type`
+  must now satisfy it; `varchar(N)` is read as "fits N characters", and
+  `data_type = 'date'` — which `date-iso` relies on — is honoured at last.
+
+- **`credit-card`'s `%cc%` rule matched `account` and `acct`.** An account
+  number or a prior-balance amount became a 13–19 digit card field. Card
+  columns are now matched by name (`%card%`, `%credit%`, `%cc_num%`,
+  `cc_%`).
+
+- **Every control rendered as `type="text"`.** `inputTypeForColumn()` existed
+  but was dead code: money, counts and dates were plain text boxes, and a
+  `CHECK (x IN (…))` enumeration had no way to become a select. Field specs now
+  carry `inputType` (number, date, email, password, tel) and `options`, and the
+  emitted renderer uses both.
+
+- **The control never received its catalog class.** `sure-form__input` was
+  declared in `CSS_CLASSES` and interpolated nowhere, so any theme rule scoped
+  to the component silently missed. Controls now carry the class from the
+  catalog's `cssClasses`.
+
+- **`COMMENT ON COLUMN` was unused.** Labels were the mechanical snake_case
+  derivation, so `mvr` rendered as "Mvr". A column comment now supplies the
+  label (first line) and help text (the rest).
+
+### Changed
+
+- `matchColumnToTypeSync` / `matchColumnToType` scoring: see the `data_type`
+  fix above. A real `DATE` column now matches `date-iso` rather than
+  `date-us`; a bare column name still matches a rule that also declares a type
+  (the type is unconfirmable without a `ColumnInfo`), but a type-only rule no
+  longer matches a bare name.
+
+- `ColumnInfo` gained optional `comment` and `enumValues` fields.
+
+- `ClientFieldSpec` gained `inputType` and `options`.
+
 ## [0.2.0] - 2026-09-28
 
 ### Security
