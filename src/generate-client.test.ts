@@ -434,6 +434,24 @@ Motor Vehicle Record fee.';
     expect(result.module).toContain('class: "sure-form__input"')
   })
 
+  it('does not blank a text field whose type declares no maxLength', () => {
+    // The recipe ends with slice(0, maxLength). With a null bound the emitted
+    // step called String.slice(0, NaN) and returned '' — every plain text
+    // column submitted empty.
+    const ddl = `CREATE TABLE notes (id INTEGER, body TEXT, code VARCHAR(12));`
+    const gen = generateClientComponent(introspectSchemaFromDdl(ddl), {
+      tier: 'production',
+      component: 'form',
+      exportName: 'NoteForm',
+    })
+    const body = gen.fields.find((f) => f.name === 'body')!
+    expect(body.validation.maxLength).toBeNull()
+    // The emitted module is exercised at runtime by the consuming app's tests;
+    // here the emitted source must carry the guard rather than a bare slice.
+    expect(gen.module).toContain("rawEnd === 'maxLength'")
+    expect(gen.module).toContain('if (end !== undefined && !Number.isFinite(end)) return value')
+  })
+
   it('shows help once when the same text arrives at both levels', () => {
     // A generated spec carries the help at the top level and under hints, and
     // the renderer used to concatenate both.

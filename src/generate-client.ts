@@ -426,10 +426,12 @@ export function sanitizeForm(
     // maxLength bounds the stored value; \`slice\` in the catalog's own recipe
     // does too, but only where the recipe asks for it. A textarea is exempt so
     // a long entry is not silently truncated.
-    for (const step of field.sanitize?.length ? field.sanitize : ['trim']) {
-      value = applyStep(value, step)
-    }
     const max = v_max(field)
+    for (const step of field.sanitize?.length ? field.sanitize : ['trim']) {
+      // The recipe names the length as a token, slice(0, maxLength); it is
+      // resolved here, not inside the step, so a null bound means no bound.
+      value = applyStep(value, step, max)
+    }
     if (max && field.control !== 'textarea') {
       value = value.slice(0, max)
     }
@@ -444,13 +446,27 @@ export function sanitizeForm(
  * catalog may name one a future version adds, and that should not blank a
  * user's input.
  */
-function applyStep(value: string, step: string): string {
+function applyStep(value: string, step: string, maxLength: number | null): string {
   const call = step.match(/^(\\w+)\\(([^)]*)\\)$/)
   if (call) {
     const args = call[2].split(',').map((a) => a.trim()).filter(Boolean)
     switch (call[1]) {
       case 'normalize': return value.normalize(args[0] ?? 'NFKC')
-      case 'slice': return value.slice(Number(args[0] ?? 0), args[1] !== undefined ? Number(args[1]) : undefined)
+      case 'slice': {
+        const start = Number(args[0] ?? 0)
+        const rawEnd = args[1]
+        const end = rawEnd === undefined
+          ? undefined
+          : rawEnd === 'maxLength'
+            ? (maxLength ?? undefined)
+            : Number(rawEnd)
+        // An unbounded or unparseable bound must not truncate: String.slice
+        // turns NaN into 0, which silently blanked every field whose catalog
+        // type declares no maxLength.
+        if (!Number.isFinite(start)) return value
+        if (end !== undefined && !Number.isFinite(end)) return value
+        return value.slice(start, end)
+      }
       default: break
     }
   }
