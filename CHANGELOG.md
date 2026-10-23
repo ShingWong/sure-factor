@@ -3,6 +3,22 @@
 All notable changes to this package are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] - 2026-10-23
+
+### Fixed
+
+- **A plain text column submitted as an empty string.** The catalog's `text`
+  type ends its sanitise recipe with `slice(0, maxLength)`; the emitted step
+  passed the literal token `maxLength` to `String.prototype.slice`, which
+  coerces to `NaN` and therefore to `0` — so any field whose catalog type
+  declares no `maxLength` was blanked on submit. Found in a real application
+  where every free-text field (`insurance_comp_1`, `customer_address`, …)
+  vanished on save, and the browser's own submit path silently produced `''`.
+
+  The bound is now resolved before the step runs: the token maps to the
+  field's `maxLength`, and an unbounded or unparseable value leaves the string
+  alone instead of truncating it.
+
 ## [0.5.1] - 2026-10-23
 
 ### Fixed — the generated UI now matches the schema it came from
