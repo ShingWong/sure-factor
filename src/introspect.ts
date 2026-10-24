@@ -547,14 +547,17 @@ export function introspectSchemaFromDdl(rawDdl: string): SchemaInfo {
       // Collapse newlines so a multi-line column definition reads as one unit.
       const trimmed = rawPart.replace(/\s+/g, ' ').trim()
       if (!trimmed) continue
-      const upper = trimmed.toUpperCase()
+      // Table constraints are statements, not columns — but the keyword must be
+      // a whole word: `startsWith('CHECK')` also matched a column named
+      // `checking_name`, silently dropping it (and every column starting with
+      // "check", which a payments schema is full of).
       if (
-        upper.startsWith('CONSTRAINT') ||
-        upper.startsWith('PRIMARY KEY') ||
-        upper.startsWith('FOREIGN KEY') ||
-        upper.startsWith('UNIQUE') ||
-        upper.startsWith('CHECK') ||
-        upper.startsWith('EXCLUDE')
+        /^CONSTRAINT\b/i.test(trimmed) ||
+        /^PRIMARY\s+KEY\b/i.test(trimmed) ||
+        /^FOREIGN\s+KEY\b/i.test(trimmed) ||
+        /^UNIQUE\b/i.test(trimmed) ||
+        /^CHECK\s*\(/i.test(trimmed) ||
+        /^EXCLUDE\b/i.test(trimmed)
       ) {
         continue
       }
