@@ -3,6 +3,20 @@
 All notable changes to this package are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] - 2026-10-23
+
+### Fixed
+
+- **Columns whose names begin with a constraint keyword were dropped.** The
+  table-constraint filter compared with `startsWith`, so `checking_name`,
+  `checking_last4` and `checking_route` were read as `CHECK` constraints and
+  silently discarded — in a payments schema, exactly the columns you cannot
+  lose. The same trap sat on `CONSTRAINT`, `UNIQUE` and `EXCLUDE`.
+
+  Constraint detection now requires the keyword as a whole word (`CHECK (` for
+  the check clause), so a column named `checking_*` or `unique_code` parses
+  normally.
+
 ## [0.5.2] - 2026-10-23
 
 ### Fixed

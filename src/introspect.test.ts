@@ -493,3 +493,23 @@ describe('introspectSchemaFromDdl: CHECK … IN becomes an enumeration', () => {
     expect(plan.enumValues ?? null).toBeNull()
   })
 })
+
+describe('introspectSchemaFromDdl: constraint keywords are whole words', () => {
+  it('keeps columns whose names start with a constraint keyword', () => {
+    // `checking_name` is a plausible column in a payments schema; a prefix
+    // match on CHECK silently dropped it (and two of its neighbours).
+    const ddl = `CREATE TABLE payment (
+      id BIGINT PRIMARY KEY,
+      checking_name VARCHAR(120) NOT NULL,
+      checking_last4 CHAR(4) NOT NULL,
+      checking_route CHAR(9) NOT NULL,
+      unique_code VARCHAR(8),
+      constraint_note TEXT,
+      CHECK (id > 0)
+    );`
+    const schema = introspectSchemaFromDdl(ddl)
+    expect(schema.tables[0]!.columns.map((c) => c.columnName)).toEqual([
+      'id', 'checking_name', 'checking_last4', 'checking_route', 'unique_code', 'constraint_note',
+    ])
+  })
+})
