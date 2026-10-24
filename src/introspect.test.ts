@@ -513,3 +513,23 @@ describe('introspectSchemaFromDdl: constraint keywords are whole words', () => {
     ])
   })
 })
+
+describe('introspectSchemaFromDdl: comments can group columns', () => {
+  it('reads a group line and leaves the rest as the comment', () => {
+    const ddl = `CREATE TABLE contracts (
+      pure_premium NUMERIC(12,2),
+      customer_name VARCHAR(60)
+    );
+    COMMENT ON COLUMN contracts.pure_premium IS 'Pure premium
+group: Fees & premium';
+    COMMENT ON COLUMN contracts.customer_name IS 'Customer name';`
+
+    const schema = introspectSchemaFromDdl(ddl)
+    const premium = schema.tables[0]!.columns.find((c) => c.columnName === 'pure_premium')!
+    const customer = schema.tables[0]!.columns.find((c) => c.columnName === 'customer_name')!
+
+    expect(premium.group).toBe('Fees & premium')
+    expect(premium.comment).toContain('Pure premium')
+    expect(customer.group ?? null).toBeNull()
+  })
+})

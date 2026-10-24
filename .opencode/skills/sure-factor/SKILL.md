@@ -125,6 +125,27 @@ component yaml, not on guesswork:
   component needs no runtime, and shipping one invites imports that are
   never called.
 
+## Group the fields in the schema
+
+A long form is easier to use when it is in sections, and the section a field
+belongs to is schema knowledge, not page knowledge. Add a `group:` line to the
+column comment:
+
+```sql
+COMMENT ON COLUMN policy_intake.deductible IS 'Deductible
+group: Coverage';
+```
+
+`renderForm` then emits one `<section class="sure-form__group" data-group="coverage">`
+per group, in first-appearance order, with the group name as its heading. Fields
+with no group render first, outside any section. The generated field also
+carries `data-field="<name>"`, and help and error share one
+`.sure-form__message` row — always present, so a grouped layout can reserve it.
+
+Layout stays with the consumer: `sure-ui` reads `--sure-form-columns`,
+`--sure-form-field-span` and `--sure-form-max-width`. See
+`sure-examples/grouped-form` for a worked example with geometry tests.
+
 ## Put the words in the schema, not in a fork
 
 A column's `COMMENT ON COLUMN` is where its UI words belong: **the first line

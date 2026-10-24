@@ -420,6 +420,27 @@ Motor Vehicle Record fee.';
     expect(field('loan_type').options).toEqual(['commercial', 'personal'])
   })
 
+  it('carries the schema group into the spec and out of the help text', () => {
+    const grouped = generateClientComponent(
+      introspectSchemaFromDdl(`CREATE TABLE t (
+        premium NUMERIC(12,2),
+        email VARCHAR(255)
+      );
+      COMMENT ON COLUMN t.premium IS 'Premium
+group: Fees & premium
+Charged at signing.';`),
+      { tier: 'production', component: 'form', exportName: 'GroupedForm' },
+    )
+    const premium = grouped.fields.find((f) => f.name === 'premium')!
+    expect(premium.group).toBe('Fees & premium')
+    expect(premium.help).toContain('Charged at signing.')
+    expect(premium.help).not.toMatch(/group:/)
+
+    // The emitted renderer sections fields only when the spec has groups.
+    expect(grouped.module).toContain('data-group')
+    expect(grouped.module).toContain('sure-form__group')
+  })
+
   it('uses the column comment as label and help', () => {
     expect(field('mvr').label).toBe('MVR')
     expect(field('mvr').help).toContain('Motor Vehicle Record fee.')

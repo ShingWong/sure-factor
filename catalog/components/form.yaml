@@ -46,6 +46,8 @@ cssClasses:
   help: sure-form__help
   label: sure-form__label
   title: sure-form__title
+  group: sure-form__group
+  message: sure-form__message
   actions: sure-form__actions
   submit: btn-primary
   cancel: btn-secondary

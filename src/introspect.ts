@@ -8,6 +8,8 @@ export interface ColumnInfo {
   foreignKey: { table: string; column: string } | null
   /** `COMMENT ON COLUMN …` text, when the DDL declares one. */
   comment?: string | null
+  /** Group the column belongs to, from a `group: …` line in its comment. */
+  group?: string | null
   /** Values from a `CHECK (column IN (…))` constraint, in declaration order. */
   enumValues?: string[] | null
 }
@@ -325,7 +327,13 @@ function attachColumnComments(ddl: string, tables: TableInfo[]): void {
     if (!table) return
     const column = table.columns.find((c) => c.columnName.toLowerCase() === columnName.toLowerCase())
     if (!column) return
-    column.comment = unquoteLiteral(literal)
+    const text = unquoteLiteral(literal)
+    column.comment = text
+    // A `group: Fees & premium` line groups columns into sections without
+    // inventing a second metadata channel: the comment already carries the
+    // label and help.
+    const group = /^\s*group\s*:\s*(.+)$/im.exec(text)
+    column.group = group ? group[1]!.trim() : null
   }
 
   // Qualified statements (`schema.table.column`) first; the plain pattern would
