@@ -30,6 +30,8 @@ export interface ClientFieldSpec {
   name: string
   label: string
   help: string
+  /** Section the field belongs to, when the schema declares one. */
+  group?: string | null
   required: boolean
   control: 'text' | 'password' | 'select' | 'textarea'
   /** HTML input type, derived from the column's SQL type and catalog type. */
@@ -98,9 +100,10 @@ function controlFor(col: ColumnInfo, type: CatalogType): ClientFieldSpec['contro
  */
 function labelFromComment(comment: string | null | undefined): { label: string | null; help: string | null } {
   if (!comment) return { label: null, help: null }
-  const [first, ...rest] = comment.split('\n').map((line) => line.trim())
-  const label = first && first !== '' ? first : null
-  const help = rest.join(' ').trim()
+  const lines = comment.split('\n').map((line) => line.trim())
+  const label = lines[0] && lines[0] !== '' ? lines[0] : null
+  // A `group:` line is metadata for the layout, not prose for the reader.
+  const help = lines.slice(1).filter((line) => line !== '' && !/^group\s*:/i.test(line)).join(' ').trim()
   return { label, help: help === '' ? null : help }
 }
 
@@ -136,6 +139,7 @@ export function buildClientFields(
         // A column comment is the DDL's own words for the field; fall back to
         // the mechanical snake_case → Sentence case derivation.
         label: fromComment.label ?? column.columnName.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()),
+        group: column.group ?? null,
         control: controlFor(column, type),
         inputType: inputTypeForColumn(column, type),
         type: type.name,
@@ -185,7 +189,9 @@ function renderModule(
   const inputClass = cls('input', 'sure-form__input')
   const errorClass = cls('error', 'sure-form__error')
   const helpClass = cls('help', 'sure-form__help')
+  const messageClass = cls('message', 'sure-form__message')
   const titleClass = cls('title', 'sure-form__title')
+  const groupClass = cls('group', 'sure-form__group')
   const actionsClass = cls('actions', 'sure-form__actions')
   const submitClass = cls('submit', 'btn-primary')
   const cancelClass = cls('cancel', 'btn-secondary')
@@ -207,6 +213,8 @@ export interface FieldSpec {
   name: string
   label: string
   help: string
+  /** Section heading this field belongs to, when the schema declares one. */
+  group?: string | null
   required: boolean
   control: 'text' | 'password' | 'select' | 'textarea' | 'hidden'
   /** HTML input type when the control is a text or password input. */
@@ -314,18 +322,30 @@ export function renderField(
   if (field.required) label.appendChild(h('span', { 'aria-hidden': 'true' }, ' *'))
 
   const parts: HTMLElement[] = [label, control]
-  if (field.help || field.hints?.help) {
-    // The same sentence can arrive in both places (a generated spec carries the
-    // help at the top level and under hints); show it once.
-    const helpText = [...new Set([field.help, field.hints?.help].filter(Boolean))].join(' \\u2014 ')
-    parts.push(
-      h('div', { class: ${JSON.stringify(helpClass)}, id: \`\${id}-help\` }, helpText),
-    )
+  // The message container is always rendered, even when empty: it is the third
+  // row of the field, and a grouped form reserves that row so an error cannot
+  // reflow the rows below it.
+  {
+    // Help and error share ONE message row, so a field is always three rows
+    // tall (label / control / message) whether or not it has anything to say.
+    // That is what lets a grouped form align rows across columns.
+    const message = h('div', { class: ${JSON.stringify(messageClass)} })
+    // An error replaces the help text rather than stacking with it: one reason
+    // per row keeps the reserved line one line tall, so nothing below moves.
+    if (!error && (field.help || field.hints?.help)) {
+      // The same sentence can arrive in both places (a generated spec carries
+      // the help at the top level and under hints); show it once.
+      const helpText = [...new Set([field.help, field.hints?.help].filter(Boolean))].join(' \\u2014 ')
+      message.appendChild(h('div', { class: ${JSON.stringify(helpClass)}, id: \`\${id}-help\` }, helpText))
+    }
+    if (error) {
+      message.appendChild(h('div', { class: ${JSON.stringify(errorClass)}, id: \`\${id}-error\`, role: 'alert' }, error))
+    }
+    parts.push(message)
   }
-  if (error) {
-    parts.push(h('div', { class: ${JSON.stringify(errorClass)}, id: \`\${id}-error\`, role: 'alert' }, error))
-  }
-  return h('div', { class: ${JSON.stringify(fieldClass)} }, ...parts)
+  // data-field is the stable hook a product uses to widen one control or point
+  // layout CSS at it, without restyling the catalog classes.
+  return h('div', { class: ${JSON.stringify(fieldClass)}, 'data-field': field.name }, ...parts)
 }
 
 export interface FormOptions {
@@ -524,8 +544,38 @@ export function renderForm(spec: FormSpec, options: FormOptions): HTMLFormElemen
   })
 
   form.appendChild(h('h2', { class: ${JSON.stringify(titleClass)} }, spec.title))
-  for (const field of visible) {
-    form.appendChild(renderField(field, values[field.name] ?? '', errors[field.name], busy, options.onChange))
+
+  // Fields may declare a group (a section in the source schema). With no
+  // groups this stays the single-column form it always was; with groups the
+  // order they first appear in is the order the sections render.
+  const grouped = visible.some((field) => field.group)
+  if (!grouped) {
+    for (const field of visible) {
+      form.appendChild(renderField(field, values[field.name] ?? '', errors[field.name], busy, options.onChange))
+    }
+  } else {
+    const order: string[] = []
+    const sections = new Map<string, FieldSpec[]>()
+    for (const field of visible) {
+      const name = field.group ?? ''
+      if (!sections.has(name)) {
+        sections.set(name, [])
+        order.push(name)
+      }
+      sections.get(name)!.push(field)
+    }
+    for (const name of order) {
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      const section = h('section', {
+        class: ${JSON.stringify(groupClass)},
+        ...(slug ? { 'data-group': slug } : {}),
+      })
+      if (name) section.appendChild(h('h3', { class: ${JSON.stringify(titleClass)} }, name))
+      for (const field of sections.get(name) ?? []) {
+        section.appendChild(renderField(field, values[field.name] ?? '', errors[field.name], busy, options.onChange))
+      }
+      form.appendChild(section)
+    }
   }
 
   const actions = h('div', { class: ${JSON.stringify(actionsClass)} })
