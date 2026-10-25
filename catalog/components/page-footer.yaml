@@ -1,0 +1,49 @@
+name: page-footer
+description: The last line of a page — a copyright notice, the legal destinations and a build credit — as static HTML, drawn from theme tokens and hidden when printing. Emitted at build or request time so a page renders without JavaScript.
+tier: prototype
+parameters:
+  legal:
+    type: text
+    required: true
+    description: The copyright or ownership line, e.g. "© 2026 Example LLC. All rights reserved."
+  links:
+    type: array
+    required: false
+    description: Array of { label, href } destinations — privacy, terms, disclaimer, compliance.
+  credit:
+    type: object
+    required: false
+    description: '{ text, href? } build credit, e.g. "Powered by sure-stack". An href must be http(s), mailto or site-relative.'
+behavior:
+  notificationModes: []
+  audio:
+    errorBell: false
+    successChime: false
+  voiceHelp: false
+sure_ui:
+  - footer
+  # Template generation (generateForTier) always emits a form wrapper and a
+  # submit button for every catalog component; declaring these keeps that path
+  # from producing unstyled markup, exactly as the menu and markdown entries do.
+  - form
+  - buttons
+cssClasses:
+  root: sure-footer
+  inner: sure-footer__inner
+  legal: sure-footer__legal
+  links: sure-footer__links
+  link: sure-footer__link
+  credit: sure-footer__credit
+example:
+  usage: Render the footer for every page of a portal, with the legal pages and the build credit.
+  code: |
+    <footer class="sure-footer">
+      <div class="sure-footer__inner">
+        <p class="sure-footer__legal">© 2026 Example LLC. All rights reserved.</p>
+        <ul class="sure-footer__links">
+          <li><a class="sure-footer__link" href="/privacy.html">Privacy</a></li>
+          <li><a class="sure-footer__link" href="/terms.html">Terms</a></li>
+        </ul>
+        <p class="sure-footer__credit"><a href="https://positronic-ai.us/sure/" rel="noopener noreferrer">Powered by sure-stack</a></p>
+      </div>
+    </footer>
