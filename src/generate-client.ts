@@ -220,6 +220,11 @@ export interface MenuItem {
   active?: boolean
   /** A separator before this item. */
   dividerBefore?: boolean
+  /**
+   * Pin this item to the far end of the bar, away from the pages before it.
+   * Use it for account-level actions (sign out) that belong at the edge.
+   */
+  align?: 'start' | 'end'
 }
 
 export interface MenuOptions {
@@ -263,12 +268,22 @@ export function renderMenu(options: MenuOptions): HTMLElement {
   })
 
   for (const item of options.items) {
+    // An end-aligned item takes the auto margin itself; when a divider sits
+    // before it, the divider carries the margin so the two travel together
+    // instead of leaving the divider stranded with the pages on the left.
+    const pinned = item.align === 'end'
     if (item.dividerBefore) {
-      nav.appendChild(h('span', { class: ${JSON.stringify(dividerClass)}, role: 'separator', 'aria-orientation': 'vertical' }))
+      nav.appendChild(h('span', {
+        class: ${JSON.stringify(dividerClass)},
+        role: 'separator',
+        'aria-orientation': 'vertical',
+        ...(pinned ? { style: 'margin-inline-start:auto' } : {}),
+      }))
     }
     const classes = [${JSON.stringify(itemClass)}, item.active ? ${JSON.stringify(activeClass)} : ''].filter(Boolean).join(' ')
     const attrs = {
       class: classes,
+      ...(pinned && !item.dividerBefore ? { style: 'margin-inline-start:auto' } : {}),
       title: item.title ?? item.label,
       'aria-label': item.title ?? item.label,
       'data-item': item.id,
