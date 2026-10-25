@@ -519,6 +519,19 @@ describe('generateClientComponent: menus are chrome, not tables', () => {
     expect(menu.module).toContain("svg.setAttribute('width', '1.15em')")
   })
 
+  it('pins an end-aligned item to the far edge of the bar', () => {
+    const menu = generateClientComponent(schema, {
+      tier: 'prototype',
+      component: 'horizontal-icon-menu',
+      exportName: 'NavMenu',
+    })
+    // Sign out belongs at the edge, not among the pages; the auto margin is
+    // what separates the two groups when the bar is wider than its content.
+    expect(menu.module).toContain("align?: 'start' | 'end'")
+    expect(menu.module).toContain("const pinned = item.align === 'end'")
+    expect(menu.module).toContain("style: 'margin-inline-start:auto'")
+  })
+
   it('does not pretend a menu is a form', () => {
     const menu = generateClientComponent(schema, {
       tier: 'prototype',
