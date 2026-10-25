@@ -20,6 +20,11 @@ describe('markdown component', () => {
     )
   })
 
+  it('keeps a hard break, so an address block keeps its shape', () => {
+    const html = renderMarkdown('Example LLC  \n1 Main Street  \nMetairie, LA')
+    expect(html).toBe('<div class="sure-markdown"><p>Example LLC<br>1 Main Street<br>Metairie, LA</p></div>')
+  })
+
   it('renders unordered and ordered lists', () => {
     expect(renderMarkdown('- a\n- b')).toContain('<ul><li>a</li><li>b</li></ul>')
     expect(renderMarkdown('1. first\n2. second')).toContain('<ol><li>first</li><li>second</li></ol>')

@@ -76,8 +76,19 @@ export function renderMarkdown(source: string, options: Options = {}): string {
   let paragraph: string[] = []
   let i = 0
 
+  // A line ending in two spaces is a hard break (the Markdown convention), so
+  // an address or a signature block keeps its shape without raw <br> tags.
   const flush = (): void => {
-    if (paragraph.length > 0) out.push(`<p>${inline(paragraph.join(' '))}</p>`)
+    if (paragraph.length === 0) return
+    const html = paragraph
+      .map((line, index) => {
+        const hard = / {2,}$/.test(line)
+        const text = inline(line.replace(/\s+$/, ''))
+        if (index === paragraph.length - 1) return text
+        return hard ? `${text}<br>` : `${text} `
+      })
+      .join('')
+    out.push(`<p>${html}</p>`)
     paragraph = []
   }
 
@@ -169,7 +180,9 @@ export function renderMarkdown(source: string, options: Options = {}): string {
       continue
     }
 
-    paragraph.push(trimmed)
+    // Trailing spaces are meaningful here (a hard break), so unlike every
+    // other branch this keeps them.
+    paragraph.push(line.replace(/^\s+/, ''))
     i += 1
   }
 
