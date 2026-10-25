@@ -207,7 +207,10 @@ export interface MenuItem {
   id: string
   /** Visible text. Used alone when no icon is given. */
   label: string
-  /** Optional glyph (an emoji or a character); rendered instead of the label. */
+  /**
+   * Optional icon, rendered instead of the label: an inline SVG (coloured by
+   * currentColor, so it follows the theme) or a plain character.
+   */
   icon?: string
   /** Tooltip and accessible name; defaults to the label. */
   title?: string
@@ -272,10 +275,24 @@ export function renderMenu(options: MenuOptions): HTMLElement {
       ...(item.active ? { 'aria-current': 'page' } : {}),
       ...(item.href ? { href: item.href } : { type: 'button' }),
     }
+    const iconIsSvg = typeof item.icon === 'string' && item.icon.trim().startsWith('<svg')
     const label = item.icon ?? item.label
     const control = item.href
       ? h('a', attrs, label)
       : h('button', attrs, label)
+    if (iconIsSvg) {
+      // An inline SVG inherits the theme through currentColor — emoji do not,
+      // which is why a coloured glyph looks wrong in a business toolbar.
+      control.innerHTML = item.icon!
+      const svg = control.firstElementChild
+      if (svg) {
+        svg.setAttribute('aria-hidden', 'true')
+        svg.setAttribute('focusable', 'false')
+        svg.setAttribute('width', '1.15em')
+        svg.setAttribute('height', '1.15em')
+        svg.setAttribute('style', 'display:block')
+      }
+    }
     if (options.onSelect) {
       control.addEventListener('click', (event) => options.onSelect?.(item, event))
     }

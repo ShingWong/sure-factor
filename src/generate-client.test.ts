@@ -507,6 +507,18 @@ describe('generateClientComponent: menus are chrome, not tables', () => {
     expect(parsesAsModule(menu.module)).toEqual({ ok: true })
   })
 
+  it('renders an inline SVG icon so it follows the theme', () => {
+    const menu = generateClientComponent(schema, {
+      tier: 'prototype',
+      component: 'horizontal-icon-menu',
+      exportName: 'NavMenu',
+    })
+    // Emoji carry their own colour; an inline SVG inherits currentColor.
+    expect(menu.module).toContain("startsWith('<svg')")
+    expect(menu.module).toContain('control.innerHTML = item.icon')
+    expect(menu.module).toContain("svg.setAttribute('width', '1.15em')")
+  })
+
   it('does not pretend a menu is a form', () => {
     const menu = generateClientComponent(schema, {
       tier: 'prototype',
