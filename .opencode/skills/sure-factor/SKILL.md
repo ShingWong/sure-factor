@@ -149,6 +149,13 @@ application chrome, because an emoji carries its own palette. `align: 'end'`
 pins an item (and a divider before it) to the far edge: sign out belongs there,
 not among the pages.
 
+For prose and page chrome, prefer the string renderers over DOM: `renderFooter()`
+for the last line of a page (copyright, legal links, build credit) and
+`renderMarkdown()` for documents. Both are escape-first, validate link
+destinations against a protocol allowlist, and return HTML a build can write
+into static pages — so they work with scripts disabled, which is what legal
+pages and printouts need.
+
 ## Group the fields in the schema
 
 A long form is easier to use when it is in sections, and the section a field
