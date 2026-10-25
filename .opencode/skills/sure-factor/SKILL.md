@@ -143,7 +143,9 @@ const nav = renderMenu({
 ```
 
 Use it instead of hand-writing buttons: the classes, active state and
-`aria-current` are the catalog's.
+`aria-current` are the catalog's. Icons may be inline SVG (they inherit
+`currentColor`, so they follow the theme) or a character — prefer SVG for
+application chrome, because an emoji carries its own palette.
 
 ## Group the fields in the schema
 
