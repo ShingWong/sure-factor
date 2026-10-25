@@ -479,3 +479,41 @@ Charged at signing.';`),
     expect(result.module).toContain('new Set([field.help, field.hints?.help]')
   })
 })
+
+describe('generateClientComponent: menus are chrome, not tables', () => {
+  const schema = introspectSchemaFromDdl(`CREATE TABLE t (id UUID PRIMARY KEY, email VARCHAR(255));`)
+
+  it('emits a menu module from the catalog entry, with no fields', () => {
+    const menu = generateClientComponent(schema, {
+      tier: 'prototype',
+      component: 'horizontal-icon-menu',
+      exportName: 'NavMenu',
+    })
+    expect(menu.fields).toEqual([])
+    expect(menu.module).toContain('export function renderMenu(')
+    expect(menu.module).toContain('sure-menu__item')
+    expect(menu.module).toContain('aria-current')
+    // The class contract comes from the yaml, not from the template.
+    expect(menu.cssClasses.menu).toBe('sure-menu')
+    expect(menu.cssClasses.divider).toBe('sure-menu__divider')
+  })
+
+  it('emits a module that compiles', () => {
+    const menu = generateClientComponent(schema, {
+      tier: 'prototype',
+      component: 'horizontal-icon-menu',
+      exportName: 'NavMenu',
+    })
+    expect(parsesAsModule(menu.module)).toEqual({ ok: true })
+  })
+
+  it('does not pretend a menu is a form', () => {
+    const menu = generateClientComponent(schema, {
+      tier: 'prototype',
+      component: 'horizontal-icon-menu',
+      exportName: 'NavMenu',
+    })
+    expect(menu.module).not.toContain('export function renderForm(')
+    expect(menu.module).not.toContain('GENERATED_FIELDS')
+  })
+})

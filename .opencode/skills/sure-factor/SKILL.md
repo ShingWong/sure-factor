@@ -125,6 +125,26 @@ component yaml, not on guesswork:
   component needs no runtime, and shipping one invites imports that are
   never called.
 
+## Menus come from the catalog, items from the app
+
+`horizontal-icon-menu` generates a `renderMenu` module. Items are application
+chrome — `{ id, label, icon?, href?, active?, dividerBefore? }` — so the
+generated module carries no fields:
+
+```ts
+const nav = renderMenu({
+  position: 'right',
+  items: [
+    { id: 'calculator', label: 'Loan calculator', icon: '🧮', href: '/app.html', active: true },
+    { id: 'settings', label: 'Settings', icon: '⚙', dividerBefore: true },
+  ],
+  onSelect: (item) => openSettings(item),
+})
+```
+
+Use it instead of hand-writing buttons: the classes, active state and
+`aria-current` are the catalog's.
+
 ## Group the fields in the schema
 
 A long form is easier to use when it is in sections, and the section a field
