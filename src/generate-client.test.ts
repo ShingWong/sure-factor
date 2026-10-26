@@ -532,6 +532,30 @@ describe('generateClientComponent: menus are chrome, not tables', () => {
     expect(menu.module).toContain("style: 'margin-inline-start:auto'")
   })
 
+  it('renders a count badge, and updates it without re-rendering the bar', () => {
+    const menu = generateClientComponent(schema, {
+      tier: 'prototype',
+      component: 'horizontal-icon-menu',
+      exportName: 'NavMenu',
+    })
+
+    expect(menu.module).toContain('badge?: string | number | null')
+    expect(menu.module).toContain('const badgeText =')
+    // Zero means "nothing waiting" — the caller passes a live count rather than
+    // deciding when to hide the badge.
+    expect(menu.module).toContain("item.badge === 0")
+    expect(menu.module).toContain("'aria-hidden': 'true'")
+    // The accessible name carries the count; data-label lets the updater
+    // rebuild it without guessing what the label was.
+    expect(menu.module).toContain("'data-label': baseLabel")
+    expect(menu.module).toContain('export function setMenuBadge(')
+    expect(menu.module).toContain('sure-menu__item--badged')
+
+    // And it still compiles: the emitted module is TypeScript with interfaces.
+    const parsed = parsesAsModule(menu.module)
+    expect(parsed.ok, parsed.ok ? '' : parsed.message).toBe(true)
+  })
+
   it('does not pretend a menu is a form', () => {
     const menu = generateClientComponent(schema, {
       tier: 'prototype',

@@ -11,6 +11,10 @@ parameters:
     required: false
     default: right
     description: left | right | center
+  badge:
+    type: number
+    required: false
+    description: Count shown on an item (items waiting in an inbox); zero shows nothing and the count is added to the accessible name
 behavior:
   notificationModes: []
   audio:
@@ -25,6 +29,8 @@ cssClasses:
   item: sure-menu__item
   active: active
   divider: sure-menu__divider
+  badge: sure-menu__badge
+  badged: sure-menu__item--badged
 example:
   usage: |
     Generate a horizontal menu for the chat header with items:

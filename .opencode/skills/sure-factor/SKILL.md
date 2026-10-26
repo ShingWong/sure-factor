@@ -147,7 +147,9 @@ Use it instead of hand-writing buttons: the classes, active state and
 `currentColor`, so they follow the theme) or a character — prefer SVG for
 application chrome, because an emoji carries its own palette. `align: 'end'`
 pins an item (and a divider before it) to the far edge: sign out belongs there,
-not among the pages.
+not among the pages. `badge` puts a count on an item (items waiting in an inbox);
+zero hides it, and `setMenuBadge(root, id, n)` updates it in place — do not
+re-render the bar to change a digit.
 
 For prose and page chrome, prefer the string renderers over DOM: `renderFooter()`
 for the last line of a page (copyright, legal links, build credit) and
