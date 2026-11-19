@@ -223,6 +223,44 @@ security:
 | `crud-resource` | Full CRUD with table + modal | inline, toast, statusBar, sidePanel | `.sure-crud__*` |
 | `search-filter` | Search with filter controls | inline, toast | `.sure-search__*` |
 
+### Document parts (report entries)
+
+A catalog entry may describe a **document part** instead of a form. Five optional
+keys extend `CatalogComponent` for this; they are data, not a second registry
+(the entries themselves live in `sure-store/components/`):
+
+| Key | Shape | Purpose |
+|-----|-------|---------|
+| `family` | `structure \| data \| figure` | which part of a document this is |
+| `data` | `{ entity?, projection?, shape? }` | store name, the closed set of column names, and shape (`record \| rows \| series \| none \| derived`) |
+| `print` | `{ keepTogether?, breakBefore?, repeatHeader?, … }` | the three checked booleans; other print declarations pass through to sure-document |
+| `guards` | `string[]` | expressions to verify at render time |
+| `fixture` | `{ input?, expect? }` | seeded, synthetic input and the facts its output must hold |
+
+```ts
+import {
+  isDocumentPart, validateDocumentPart, generateReportModule,
+} from '@shing.wong/sure-factor'
+
+const issues = validateDocumentPart(component) // [] when safe to generate from
+if (isDocumentPart(component)) {
+  const source = generateReportModule(component) // report contract module
+}
+```
+
+A guard may name a projection as `F:name`, as `rows.name` (or `record.name`,
+`data.name`, `series.name`), or as a bare identifier. `P:name` names a
+parameter, and function names and computed namespaces such as `totals` are not
+projections. **A guard that references an undeclared projection fails loudly**,
+naming the guard and the missing name.
+
+A report entry is a document part semantically, **not** a form — but the
+template generator still emits a form wrapper and a submit button for every
+component. Report entries therefore keep declaring `form` and `buttons` in
+`sure_ui`; the registry test enforces this and the guard was not weakened.
+Styling the new `document` and `figure` blocks is deferred until sure-ui
+publishes them (the installed version has neither).
+
 ## Tiers
 
 Generation progresses through three quality tiers — same schema, different output depth:

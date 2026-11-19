@@ -81,6 +81,54 @@ export interface CatalogComponent {
    * the blocks shipped to style it.
    */
   sure_ui?: string[]
+
+  // ── document-part extension (catalog schema 0.6) ──────────────────────────
+  // A report entry is a document part, not a form. It still declares `form`
+  // and `buttons` in `sure_ui`: the template generator emits a form wrapper
+  // and a submit button for every component, and the registry test enforces
+  // that coverage. These keys add document semantics; they do not exempt an
+  // entry from the template's class contract.
+  family?: ComponentFamily
+  data?: ComponentData
+  print?: ComponentPrint
+  guards?: string[]
+  fixture?: ComponentFixture
+}
+
+/** Document-part families — see sure-document `docs/catalog.md §3`. */
+export type ComponentFamily = 'structure' | 'data' | 'figure'
+
+/** The shape of the rows a document part consumes. */
+export type ComponentDataShape = 'record' | 'rows' | 'series' | 'none' | 'derived'
+
+/**
+ * Where a document part gets its data from. `projection` is the closed set of
+ * column names a guard may reference; a guard that names anything else fails
+ * validation (`src/catalog.ts`). The catalog owns no query logic — the store
+ * name and projection are declarations the host resolves.
+ */
+export interface ComponentData {
+  entity?: string
+  projection?: string[]
+  shape?: ComponentDataShape
+}
+
+/**
+ * Print declarations for a document part. The three booleans are the ones
+ * sure-factor validates; the rest are passed through to sure-document as data
+ * (paper, margins, binding, scale, …), never interpreted here.
+ */
+export interface ComponentPrint {
+  keepTogether?: boolean
+  breakBefore?: boolean
+  repeatHeader?: boolean
+  [key: string]: unknown
+}
+
+/** A seeded, synthetic example: input rows plus the facts the output must hold. */
+export interface ComponentFixture {
+  input?: Record<string, unknown>
+  expect?: Record<string, unknown>
 }
 
 export interface CatalogAsset {
