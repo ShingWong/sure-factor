@@ -38,6 +38,7 @@ export type {
 } from './types.js'
 export {
   COMPONENT_FAMILIES,
+  unpublishedBlocks,
   isDocumentPart,
   validateDocumentPart,
   assertValidDocumentPart,

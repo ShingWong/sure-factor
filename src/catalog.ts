@@ -6,10 +6,11 @@
  * pure data: this module only checks their shape and, critically, checks that
  * a guard does not reference a projection the entry never declared.
  *
- * No sure-ui styles are composed here. The installed sure-ui does not yet
- * publish the `document`/`figure` blocks those parts need, so the generated
- * report module carries the contract (layout data, guards, classes) and leaves
- * runtime rendering to sure-document. See the TODO in `generateReportModule`.
+ * No sure-ui styles are composed here. Report parts declare the `document`
+ * and `figure` blocks, which sure-ui publishes from 0.3.6; the registry test
+ * checks those declarations against the installed `COMPONENTS` via
+ * `unpublishedBlocks`. The generated report module carries the contract
+ * (layout data, guards, classes) and leaves runtime rendering to sure-document.
  */
 import type {
   CatalogComponent,
@@ -19,6 +20,26 @@ import type {
 
 /** The closed set of document-part families. */
 export const COMPONENT_FAMILIES: readonly ComponentFamily[] = ['structure', 'data', 'figure'] as const
+
+/**
+ * Declared `sure_ui` blocks that the installed sure-ui does not publish.
+ *
+ * `knownBlocks` is supplied by the caller — normally sure-ui's `COMPONENTS`
+ * export — so this module stays dependency-free and never evaluates strings:
+ * it is a plain membership test over the closed `sure_ui` declaration. An empty
+ * result means every declared block has shipped styles; a non-empty result
+ * names each offending component (`name: block`) so the registry test fails
+ * loudly. No dynamic code execution of the declarations is involved.
+ */
+export function unpublishedBlocks(
+  component: Pick<CatalogComponent, 'name' | 'sure_ui'>,
+  knownBlocks: ReadonlySet<string>,
+): string[] {
+  const label = component.name || 'unnamed component'
+  return (component.sure_ui ?? [])
+    .filter((block) => !knownBlocks.has(block))
+    .map((block) => `${label}: ${block}`)
+}
 
 const DATA_SHAPES: readonly ComponentDataShape[] = ['record', 'rows', 'series', 'none', 'derived'] as const
 
@@ -152,9 +173,10 @@ export function assertValidDocumentPart(component: CatalogComponent): void {
  * rendering is sure-document's job and the classes are the only coupling.
  *
  * The generated `STYLE_BLOCKS` is intentionally the catalog's `sure_ui` list.
- * TODO(sure-ui): once the `document` and `figure` blocks are published, add a
- * check that every report entry's `sure_ui` names a shipped block (the registry
- * test cannot do that against the installed sure-ui, which has neither block).
+ * Every declared block is checked against the installed sure-ui `COMPONENTS`
+ * by the registry test (`unpublishedBlocks`), so a document part cannot name a
+ * block with no shipped styles — `document` and `figure` are published as of
+ * sure-ui 0.3.6.
  */
 export function generateReportModule(component: CatalogComponent): string {
   assertValidDocumentPart(component)

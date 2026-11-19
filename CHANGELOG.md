@@ -3,6 +3,19 @@
 All notable changes to this package are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Bumped `@shing.wong/sure-ui` to `^0.3.6` (publishes the `document` and
+  `figure` blocks) and refreshed `package-lock.json`.
+- Enabled the document-part `sure_ui` block check. `unpublishedBlocks` (exported
+  from the package root) validates every report entry's declared blocks against
+  the installed sure-ui `COMPONENTS`, so `document`/`figure` now pass and an
+  unpublished block fails loudly instead of being deferred. This completes the
+  follow-up to the 0.6.0 catalog schema extension. The `form` + `buttons`
+  template class-coverage guard is unchanged.
+
 ## [0.6.0] - 2026-11-19
 
 ### Added — catalog schema extension (document parts)
