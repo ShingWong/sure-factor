@@ -55,6 +55,22 @@ describe('TypeScript type shapes', () => {
     expect(c.parameters).toBeUndefined()
   })
 
+  it('CatalogComponent carries the document-part extension keys', () => {
+    const c: CatalogComponent = {
+      name: 'document-table',
+      family: 'data',
+      data: { entity: 'invoices', projection: ['amount'], shape: 'rows' },
+      print: { keepTogether: true },
+      guards: ['sum(rows.amount) > 0'],
+      fixture: { input: { rows: [] }, expect: { pages: 1 } },
+    }
+    expect(c.family).toBe('data')
+    expect(c.data!.projection).toEqual(['amount'])
+    expect(c.print!.keepTogether).toBe(true)
+    expect(c.guards).toHaveLength(1)
+    expect(c.fixture!.expect).toEqual({ pages: 1 })
+  })
+
   it('ColumnInfo shape is correct', () => {
     const col: ColumnInfo = {
       columnName: 'email',

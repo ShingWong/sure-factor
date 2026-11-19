@@ -17,11 +17,24 @@
  * template submits with `btn-primary`, and falls back to a `sure-form`
  * wrapper when the yaml declares no `form` class — so `buttons` is always
  * required, and `form` is required whenever cssClasses omits it.
+ *
+ * A report entry is a document part, not a form in the semantic sense — it
+ * carries the `family`/`data`/`print`/`guards`/`fixture` extension — but the
+ * generator still emits the same wrapper and submit button for it. The
+ * class-coverage guards below therefore apply to report entries unchanged;
+ * the tests at the bottom pin that intent.
+ *
+ * TODO(sure-ui-blocks): report entries will declare the unpublished `document`
+ * and `figure` blocks. The "declared block exists" check below runs against the
+ * installed sure-ui (0.3.5), which has neither, so that check is deliberately
+ * deferred until sure-ui ships them. Do not weaken these guards to admit an
+ * unpublished block — stage the sure-ui release first.
  */
 import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync } from 'fs'
 import { COMPONENTS } from '@shing.wong/sure-ui'
 import { parseYaml } from './parse-yaml.js'
+import { COMPONENT_FAMILIES, isDocumentPart, validateDocumentPart } from './catalog.js'
 import type { CatalogComponent } from './types.js'
 
 const DIR = new URL('../catalog/components/', import.meta.url)
@@ -86,5 +99,61 @@ describe('catalog registry: sure_ui declares what the markup needs', () => {
       .filter((c) => !(c.cssClasses?.form) && !(c.sure_ui ?? []).includes('form'))
       .map((c) => c.name)
     expect(missing, `yamls whose form wrapper would be unstyled: ${missing.join(', ')}`).toEqual([])
+  })
+})
+
+describe('catalog registry: report entries are document parts, not forms', () => {
+  /** A report entry as sure-store/components will declare it (only published
+      sure-ui families: table/form/buttons — never an unpublished block). */
+  function reportEntry(overrides: Partial<CatalogComponent> = {}): CatalogComponent {
+    return {
+      name: 'document-table',
+      family: 'data',
+      data: { entity: 'invoices', projection: ['amount'], shape: 'rows' },
+      guards: ['totals.grand_total == sum(rows.amount)'],
+      sure_ui: ['table', 'form', 'buttons'],
+      cssClasses: { form: 'sure-table', row: 'sure-table__row' },
+      ...overrides,
+    }
+  }
+
+  /** The very same coverage condition the two guards above enforce — reused
+      here to prove a report entry cannot slip past them. */
+  function templateCoverageGaps(c: CatalogComponent): string[] {
+    const gaps: string[] = []
+    if (!(c.sure_ui ?? []).includes('buttons')) gaps.push('buttons')
+    if (!c.cssClasses?.form && !(c.sure_ui ?? []).includes('form')) gaps.push('form')
+    return gaps
+  }
+
+  it('recognises a report entry by its extension keys, with a valid family', () => {
+    const c = reportEntry()
+    expect(isDocumentPart(c)).toBe(true)
+    expect(c.family && COMPONENT_FAMILIES.includes(c.family)).toBe(true)
+    expect(validateDocumentPart(c)).toEqual([])
+  })
+
+  it('a report entry is not a form semantically — the form keys are template plumbing', () => {
+    const c = reportEntry()
+    // It has no form *parameters*, only the class/blocks the template needs.
+    expect(c.parameters?.fields).toBeUndefined()
+    expect(c.family).toBe('data')
+    // ...and it still declares both template families, deliberately.
+    expect(c.sure_ui).toContain('form')
+    expect(c.sure_ui).toContain('buttons')
+  })
+
+  it('a report entry is NOT exempt from the template class-coverage guard', () => {
+    expect(templateCoverageGaps(reportEntry())).toEqual([])
+    const sloppy = reportEntry({ sure_ui: ['table'], cssClasses: { row: 'sure-table__row' } })
+    expect(templateCoverageGaps(sloppy)).toEqual(['buttons', 'form'])
+  })
+
+  it('any document part that lands in this catalog validates its extension keys', () => {
+    const parts = loadComponents().filter(isDocumentPart)
+    for (const c of parts) {
+      expect(c.family && COMPONENT_FAMILIES.includes(c.family), `${c.name}: bad family`).toBe(true)
+      expect(validateDocumentPart(c), `${c.name}: invalid extension keys`).toEqual([])
+    }
   })
 })

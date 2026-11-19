@@ -3,6 +3,41 @@
 All notable changes to this package are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-11-19
+
+### Added — catalog schema extension (document parts)
+
+- `CatalogComponent` gains five optional keys for **report entries**: `family`
+  (`structure | data | figure`), `data` (`entity`, `projection`, `shape`),
+  `print` (`keepTogether`, `breakBefore`, `repeatHeader` and pass-through print
+  declarations), `guards` (strings) and `fixture` (synthetic `input`/`expect`).
+  These are data, not a second registry: the catalog stays a sure-factor
+  `CatalogComponent`, and sure-store hosts the document-part entries.
+- `isDocumentPart`, `validateDocumentPart`, `assertValidDocumentPart`,
+  `generateReportModule` and `COMPONENT_FAMILIES` are exported from the package
+  root. `generateReportModule` emits the dependency-free report contract
+  (`CSS_CLASSES`, `REPORT`, `PROJECTION`, `GUARDS`, `STYLE_BLOCKS`) consumed by
+  sure-document's renderer; no markup or sure-ui styles are generated here.
+
+### Fixed — guard drift
+
+- A guard that references a projection the entry never declared now **fails
+  loudly** at validation/generation time with an error naming the guard, the
+  unknown projection and the declared `data.projection`. `P:` parameters,
+  function names and computed namespaces such as `totals` are not mistaken for
+  projections. Guards without a `data.projection` are rejected too.
+
+### Notes
+
+- **The class-coverage guard was not weakened.** A report entry is a document
+  part semantically, but the template generator still emits a `sure-form`
+  wrapper and a `btn-primary` submit for every component; report entries keep
+  declaring `form` and `buttons` in `sure_ui`.
+- Deferred until sure-ui ships the `document` and `figure` blocks: validating
+  report entries' `sure_ui` against the installed `COMPONENTS`. `sure-ui`
+  0.3.5 has neither block, so the registry test deliberately does not check
+  them (named `TODO(sure-ui-blocks)` in `src/registry.test.ts`).
+
 ## [0.5.3] - 2026-10-23
 
 ### Fixed

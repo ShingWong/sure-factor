@@ -29,3 +29,18 @@ export { toYaml, toJson, fromJson, toMarkdown, toXml, fromXml, convert } from '.
 export { formatCode, formatGeneratedOutput, formatGeneratedStoreOutput } from './format.js'
 export type { FormattedOutput, FormattedStoreOutput } from './format.js'
 export type { CatalogType, CatalogComponent, CatalogAsset } from './types.js'
+export type {
+  ComponentFamily,
+  ComponentDataShape,
+  ComponentData,
+  ComponentPrint,
+  ComponentFixture,
+} from './types.js'
+export {
+  COMPONENT_FAMILIES,
+  isDocumentPart,
+  validateDocumentPart,
+  assertValidDocumentPart,
+  generateReportModule,
+  type DocumentPartIssue,
+} from './catalog.js'
