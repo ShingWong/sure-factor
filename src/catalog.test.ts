@@ -80,11 +80,11 @@ describe('catalog document-part extension: guard validation', () => {
     expect(() => assertValidDocumentPart(c)).toThrow(/not_a_column/)
   })
 
-  it('accepts a guard over a declared projection, and ignores computed totals and parameters', () => {
+  it('accepts a guard over a declared projection, and ignores computed totals and root parameters', () => {
     const c = report()
     c.guards = [
       'totals.grand_total == sum(rows.amount)',
-      'F:due_on != P:as_of',
+      '@as_of != root.as_of',
     ]
     expect(validateDocumentPart(c)).toEqual([])
   })
@@ -125,5 +125,127 @@ describe('catalog document-part extension: report module', () => {
 
   it('refuses to generate for an entry with no document keys', () => {
     expect(() => generateReportModule({ name: 'form' })).toThrow(/not a document part/)
+  })
+})
+
+describe('catalog document-part extension: strict expression grammar', () => {
+  function rowsGuard(): CatalogComponent {
+    const c = report()
+    c.data = { entity: 'invoices', projection: ['amount', 'late_fee', 'as_of'], shape: 'rows' }
+    return c
+  }
+
+  it('accepts every new sigil, literal and operator of the closed grammar', () => {
+    const c = rowsGuard()
+    c.guards = [
+      'totals.grand_total == sum(rows.amount)', // totals namespace + array range
+      '.amount > 0', // row scope, dot sigil
+      'row.late_fee >= 0', // row scope, row binding
+      '@as_of != root.as_of', // root scope, both forms
+      '100 == 100 and 0.05 >= -3', // raw numeric literals
+      'sum:rows.amount,rows.late_fee >= 1', // colon aggregate + array ranges
+      'sub:rows.amount,rows.late_fee <= 100',
+      'mul:rows.amount,rows.late_fee >= 0',
+      'div:rows.amount,rows.late_fee >= 0',
+      'avg:rows.amount >= 0',
+      'ifpresent:row.amount->row.amount', // existence guard
+    ]
+    expect(validateDocumentPart(c)).toEqual([])
+  })
+
+  it('rejects a bare identifier with SCOPE_INVALID naming the token', () => {
+    const c = report()
+    c.guards = ['amount > 0']
+    const issues = validateDocumentPart(c)
+    expect(issues.map((i) => i.code)).toContain('SCOPE_INVALID')
+    expect(issues.some((i) => i.message.includes('"amount"'))).toBe(true)
+    expect(() => assertValidDocumentPart(c)).toThrow(/amount/)
+  })
+
+  it('rejects function names outside the closed grammar as bare identifiers', () => {
+    const c = report()
+    c.guards = ['min:rows.amount > 0']
+    const issues = validateDocumentPart(c)
+    expect(issues.map((i) => i.code)).toContain('SCOPE_INVALID')
+    expect(issues.some((i) => i.message.includes('"min"'))).toBe(true)
+  })
+
+  it('rejects the removed F: and P: forms with SCOPE_INVALID naming each token', () => {
+    const c = report()
+    c.guards = ['F:amount != P:as_of']
+    const scope = validateDocumentPart(c).filter((i) => i.code === 'SCOPE_INVALID')
+    expect(scope.map((i) => i.message).join(' ')).toContain('F:amount')
+    expect(scope.map((i) => i.message).join(' ')).toContain('P:as_of')
+    expect(() => assertValidDocumentPart(c)).toThrow(/F:amount/)
+  })
+
+  it('rejects row scope when there is no active row context', () => {
+    const c = report()
+    c.data = { entity: 'invoices', projection: ['amount'], shape: 'record' }
+    c.guards = ['.amount > 0', 'row.amount > 0', 'rows.amount > 0']
+    const scope = validateDocumentPart(c).filter((i) => i.code === 'SCOPE_INVALID')
+    expect(scope.length).toBe(3)
+    const messages = scope.map((i) => i.message).join(' ')
+    expect(messages).toContain('.amount')
+    expect(messages).toContain('row.amount')
+    expect(messages).toContain('rows.amount')
+  })
+
+  it('still fails loudly on an undeclared projection behind a new sigil', () => {
+    const c = rowsGuard()
+    c.guards = ['.ghost > 0']
+    const issues = validateDocumentPart(c)
+    expect(issues.map((i) => i.code)).toContain('UNKNOWN_PROJECTION')
+    expect(issues[0]!.message).toContain('ghost')
+  })
+
+  /** The guards of the five published sure-store entries, verbatim. */
+  const PUBLISHED: Array<{
+    name: string
+    shape: 'rows' | 'record' | 'none'
+    projection: string[]
+    guards: string[]
+  }> = [
+    {
+      name: 'document-table', shape: 'rows',
+      projection: ['line_number', 'due_on', 'amount', 'description'],
+      guards: ['totals.grand_total == sum(rows.amount)', 'count(rows.line_number) >= 1'],
+    },
+    {
+      name: 'document-totals', shape: 'record',
+      projection: ['subtotal', 'tax', 'grand_total'],
+      guards: ['record.grand_total == record.subtotal + record.tax'],
+    },
+    {
+      name: 'document-keyvalue', shape: 'record',
+      projection: ['label', 'value'],
+      guards: ['ifpresent(record.value, true)'],
+    },
+    {
+      name: 'document-schedule', shape: 'rows',
+      projection: ['installment', 'due_on', 'amount', 'late_fee'],
+      guards: [
+        'totals.grand_total == sum(rows.amount) + sum(rows.late_fee)',
+        'count(rows.installment) >= 1',
+      ],
+    },
+    {
+      name: 'document-graphic', shape: 'none',
+      projection: ['alt'],
+      guards: ['ifpresent(record.alt, true)'],
+    },
+  ]
+
+  it('keeps all five published sure-store entries valid', () => {
+    for (const entry of PUBLISHED) {
+      const c: CatalogComponent = {
+        name: entry.name,
+        family: 'data',
+        data: { entity: 'examples', projection: entry.projection, shape: entry.shape },
+        guards: entry.guards,
+      }
+      expect(validateDocumentPart(c), entry.name).toEqual([])
+      expect(() => assertValidDocumentPart(c), entry.name).not.toThrow()
+    }
   })
 })

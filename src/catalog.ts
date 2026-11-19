@@ -43,14 +43,18 @@ export function unpublishedBlocks(
 
 const DATA_SHAPES: readonly ComponentDataShape[] = ['record', 'rows', 'series', 'none', 'derived'] as const
 
-/** Bindings whose dotted leaves are projection names (e.g. `rows.amount`). */
+/** Bindings whose dotted leaves are row/record projections. */
 const ROW_BINDINGS = new Set(['rows', 'row', 'record', 'data', 'series', 'item', 'fields', 'input'])
 
-/** Words that are operators, builtins or computed namespaces, not projections. */
-const NON_PROJECTIONS = new Set([
+/** The canonical aggregates of the strict grammar. `count` is a tolerated
+ *  legacy alias kept so the published sure-store entries still validate; it is
+ *  not one of the canonical five. */
+const AGGREGATES = new Set(['sum', 'sub', 'mul', 'div', 'avg', 'count'])
+
+/** Operators, literals and keywords that are never references. */
+const NON_REFERENCES = new Set([
   'true', 'false', 'null', 'undefined', 'and', 'or', 'not', 'in',
-  'sum', 'sub', 'ifpresent', 'min', 'max', 'count', 'abs', 'round', 'len',
-  'totals', 'F', 'P',
+  'ifpresent',
 ])
 
 /** True when an entry opts into the document-part extension. */
@@ -62,47 +66,101 @@ export function isDocumentPart(component: Partial<CatalogComponent>): boolean {
     || component.fixture !== undefined
 }
 
+interface ScopeError {
+  token: string
+  reason: 'removed' | 'bare' | 'no-row-context' | 'namespace'
+}
+
+interface GuardScan {
+  /** Row/record projections a guard references — checked against data.projection. */
+  projections: string[]
+  /** Tokens that violate the closed scope grammar. */
+  scopeErrors: ScopeError[]
+}
+
 /**
- * Extract every projection name a guard expression references.
+ * Scan a guard without evaluating it. The strict, closed grammar has exactly
+ * these reference forms:
  *
- * Three reference forms are understood (the closed vocabulary of
- * sure-document `design §5`, plus the dotted form used in `docs/catalog.md`):
+ *  - `.field` / `row.field` / `rows.field` — row scope (needs an active row context)
+ *  - `record.field` (and the legacy `data`/`series`/… bindings) — the current record
+ *  - `@field` / `root.field`               — root (document/header) scope
+ *  - `totals.field`                        — explicit root namespace for server totals
+ *  - raw numeric literals, aggregates (`sum:` / `sum(...)`, …) and `ifpresent:`
+ *    operators — never references
  *
- *  - `F:name`          — field of the current row (design §5)
- *  - `rows.name`       — dotted access under a row binding, incl. `record`,
- *                        `data`, `series`
- *  - `name`            — a bare identifier used as a value
- *
- * `P:name` names a parameter, not a projection, and is ignored; so are
- * function names, keywords and computed namespaces such as `totals`. This is
- * a scanner, not an evaluator — no dynamic code execution of guard strings.
+ * Removed forms (`F:`, `P:`) and bare identifiers fail closed as SCOPE_INVALID,
+ * matching sure-document's `E_SCOPE_INVALID`. This is a scanner, not an
+ * evaluator — no dynamic code execution of guard strings.
  */
-function projectionRefs(expr: string): string[] {
-  const refs = new Set<string>()
-
-  for (const m of expr.matchAll(/\bF:([A-Za-z_]\w*)/g)) refs.add(m[1]!)
-
-  const params = [...expr.matchAll(/\bP:([A-Za-z_]\w*)/g)].map((m) => m[1]!)
-
-  for (const m of expr.matchAll(/\b([A-Za-z_]\w*)\.([A-Za-z_]\w*)/g)) {
-    if (ROW_BINDINGS.has(m[1]!)) refs.add(m[2]!)
+function scanGuard(expr: string, hasRowContext: boolean): GuardScan {
+  const text = expr.replace(/'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"/g, (s) => ' '.repeat(s.length))
+  const projections = new Set<string>()
+  const scopeErrors = new Map<string, ScopeError>()
+  const addError = (token: string, reason: ScopeError['reason']): void => {
+    if (!scopeErrors.has(token)) scopeErrors.set(token, { token, reason })
   }
 
-  for (const m of expr.matchAll(/\b([A-Za-z_]\w*)\b(?!\s*\()/g)) {
-    const id = m[1]!
-    if (NON_PROJECTIONS.has(id) || params.includes(id)) continue
-    // A dotted leaf was already captured above; a dotted *root* is a binding.
-    if (new RegExp(`\\.${id}\\b`).test(expr)) continue
-    if (new RegExp(`\\b${id}\\s*\\.`).test(expr)) continue
-    refs.add(id)
+  // F: and P: are removed outright; flag them before the general scan and
+  // skip their leaves when it runs.
+  for (const m of text.matchAll(/\b([FP]):([A-Za-z_]\w*)/g)) {
+    addError(`${m[1]}:${m[2]}`, 'removed')
   }
 
-  return [...refs]
+  for (const m of text.matchAll(/([@.]?)([A-Za-z_]\w*)(?:(\s*\.\s*)([A-Za-z_]\w*))?/g)) {
+    const sigil = m[1] ?? ''
+    const id = m[2]!
+    const leaf = m[4]
+    const idx = m.index!
+    const before = text.slice(Math.max(0, idx - 2), idx)
+    const after = text.slice(idx + m[0]!.length, idx + m[0]!.length + 1)
+
+    // The leaf / sigil of an already-reported F:x or P:x form.
+    if (before === 'F:' || before === 'P:') continue
+    if (after === ':' && (id === 'F' || id === 'P')) continue
+    // A trailing colon marks a colon-form operator (`sum:`, `ifpresent:`).
+    if (after === ':' && (AGGREGATES.has(id) || id === 'ifpresent')) continue
+
+    if (sigil === '@') continue // root scope field — a parameter, not a projection
+
+    if (sigil === '.') {
+      if (!hasRowContext) addError(`.${id}`, 'no-row-context')
+      else if (leaf === undefined) projections.add(id)
+      continue
+    }
+
+    if (leaf !== undefined) {
+      if (id === 'root' || id === 'totals') continue // root namespaces, not projections
+      if (ROW_BINDINGS.has(id)) {
+        if ((id === 'row' || id === 'rows') && !hasRowContext) addError(`${id}.${leaf}`, 'no-row-context')
+        else projections.add(leaf)
+        continue
+      }
+      addError(id, 'namespace') // unknown namespace is a bare identifier prefix
+      continue
+    }
+
+    // A bare, sigil-less identifier. Operators, function names and literals
+    // are fine; everything else fails closed.
+    if (!AGGREGATES.has(id) && !NON_REFERENCES.has(id)) addError(id, 'bare')
+  }
+
+  return { projections: [...projections], scopeErrors: [...scopeErrors.values()] }
+}
+
+function scopeErrorMessage(label: string, guard: string, err: ScopeError): string {
+  const base = `${label}: guard "${guard}" uses scope-invalid token "${err.token}"`
+  switch (err.reason) {
+    case 'removed': return `${base}: F: and P: forms are removed; use .field/row.field, @field/root.field, or totals.field`
+    case 'bare': return `${base}: a bare identifier has no scope; use .field/row.field, @field/root.field, totals.field, or a numeric literal`
+    case 'no-row-context': return `${base}: row scope requires an active row context (data.shape "rows" or "series")`
+    case 'namespace': return `${base}: "${err.token}" is not a declared namespace or row binding`
+  }
 }
 
 export interface DocumentPartIssue {
-  /** Short machine-readable reason. */
-  code: 'BAD_FAMILY' | 'BAD_SHAPE' | 'GUARD_WITHOUT_PROJECTION' | 'UNKNOWN_PROJECTION' | 'BAD_FIXTURE'
+  /** Short machine-readable reason. `SCOPE_INVALID` mirrors sure-document's E_SCOPE_INVALID. */
+  code: 'BAD_FAMILY' | 'BAD_SHAPE' | 'GUARD_WITHOUT_PROJECTION' | 'UNKNOWN_PROJECTION' | 'BAD_FIXTURE' | 'SCOPE_INVALID'
   /** Human-readable, names the offending value. */
   message: string
 }
@@ -139,6 +197,7 @@ export function validateDocumentPart(component: CatalogComponent): DocumentPartI
 
   const guards = component.guards ?? []
   const projection = component.data?.projection ?? []
+  const hasRowContext = component.data?.shape === 'rows' || component.data?.shape === 'series'
   if (guards.length > 0 && projection.length === 0) {
     issues.push({
       code: 'GUARD_WITHOUT_PROJECTION',
@@ -146,7 +205,11 @@ export function validateDocumentPart(component: CatalogComponent): DocumentPartI
     })
   }
   for (const guard of guards) {
-    for (const ref of projectionRefs(guard)) {
+    const { projections, scopeErrors } = scanGuard(guard, hasRowContext)
+    for (const err of scopeErrors) {
+      issues.push({ code: 'SCOPE_INVALID', message: scopeErrorMessage(label, guard, err) })
+    }
+    for (const ref of projections) {
       if (!projection.includes(ref)) {
         issues.push({
           code: 'UNKNOWN_PROJECTION',

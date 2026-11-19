@@ -248,11 +248,27 @@ if (isDocumentPart(component)) {
 }
 ```
 
-A guard may name a projection as `F:name`, as `rows.name` (or `record.name`,
-`data.name`, `series.name`), or as a bare identifier. `P:name` names a
-parameter, and function names and computed namespaces such as `totals` are not
-projections. **A guard that references an undeclared projection fails loudly**,
-naming the guard and the missing name.
+Guards follow a **closed scope grammar** with no implicit fallback:
+
+- `.field` / `row.field` / `rows.field` — row scope, only when `data.shape` is
+  `rows` (or `series`); an explicit array range such as `rows.amount` is a valid
+  aggregate operand.
+- `record.field` (and the legacy `data`/`series`/`item`/`fields`/`input`
+  bindings) — the current record, available in any shape.
+- `@field` / `root.field` — root (document/header) scope; `totals.field` is an
+  explicit root namespace for server-recomputed totals. Neither is a projection.
+- Raw numeric literals (`100`, `0.05`, `-3`); aggregates `sum:`, `sub:`, `mul:`,
+  `div:`, `avg:` with comma-separated operands (`count` is a tolerated legacy
+  alias, not one of the canonical five); and `ifpresent:Condition->Then` as the
+  existence guard. The published entries' `sum(...)` / `count(...)` /
+  `ifpresent(...)` call forms remain valid.
+
+`P:` and `F:` are removed. A bare identifier, an unknown namespace, or a
+row-scoped token without an active row context fails validation with
+`SCOPE_INVALID` naming the offending token — sure-factor's mirror of
+sure-document's `E_SCOPE_INVALID`. **A guard that references an undeclared
+projection still fails loudly** with `UNKNOWN_PROJECTION`, naming the guard and
+the missing name.
 
 A report entry is a document part semantically, **not** a form — but the
 template generator still emits a form wrapper and a submit button for every
