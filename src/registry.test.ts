@@ -24,17 +24,16 @@
  * class-coverage guards below therefore apply to report entries unchanged;
  * the tests at the bottom pin that intent.
  *
- * TODO(sure-ui-blocks): report entries will declare the unpublished `document`
- * and `figure` blocks. The "declared block exists" check below runs against the
- * installed sure-ui (0.3.5), which has neither, so that check is deliberately
- * deferred until sure-ui ships them. Do not weaken these guards to admit an
- * unpublished block — stage the sure-ui release first.
+ * Report entries declare the `document` and `figure` blocks, published in
+ * sure-ui 0.3.6. The "declared block exists" check below runs against the
+ * installed COMPONENTS export via `unpublishedBlocks`, so an unpublished block
+ * fails loudly rather than being admitted by weakening the coverage guards.
  */
 import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync } from 'fs'
 import { COMPONENTS } from '@shing.wong/sure-ui'
 import { parseYaml } from './parse-yaml.js'
-import { COMPONENT_FAMILIES, isDocumentPart, validateDocumentPart } from './catalog.js'
+import { COMPONENT_FAMILIES, isDocumentPart, validateDocumentPart, unpublishedBlocks } from './catalog.js'
 import type { CatalogComponent } from './types.js'
 
 const DIR = new URL('../catalog/components/', import.meta.url)
@@ -68,8 +67,7 @@ describe('catalog registry: sure_ui declares what the markup needs', () => {
 
   it('every declared block is a family sure-ui actually exports', () => {
     const known = new Set<string>(COMPONENTS)
-    const bad: string[] = []
-    for (const c of components) for (const b of c.sure_ui ?? []) if (!known.has(b)) bad.push(`${c.name}: ${b}`)
+    const bad = components.flatMap((c) => unpublishedBlocks(c, known))
     expect(bad, `blocks not in sure-ui COMPONENTS: ${bad.join(', ')}`).toEqual([])
   })
 
@@ -103,15 +101,18 @@ describe('catalog registry: sure_ui declares what the markup needs', () => {
 })
 
 describe('catalog registry: report entries are document parts, not forms', () => {
-  /** A report entry as sure-store/components will declare it (only published
-      sure-ui families: table/form/buttons — never an unpublished block). */
+  /** A report entry as sure-store/components will declare it: the two new
+      published blocks (`document`/`figure`) plus the table and the template
+      plumbing (`form`/`buttons`). */
+  const KNOWN = new Set<string>(COMPONENTS)
+
   function reportEntry(overrides: Partial<CatalogComponent> = {}): CatalogComponent {
     return {
       name: 'document-table',
       family: 'data',
       data: { entity: 'invoices', projection: ['amount'], shape: 'rows' },
       guards: ['totals.grand_total == sum(rows.amount)'],
-      sure_ui: ['table', 'form', 'buttons'],
+      sure_ui: ['table', 'form', 'buttons', 'document', 'figure'],
       cssClasses: { form: 'sure-table', row: 'sure-table__row' },
       ...overrides,
     }
@@ -147,6 +148,31 @@ describe('catalog registry: report entries are document parts, not forms', () =>
     expect(templateCoverageGaps(reportEntry())).toEqual([])
     const sloppy = reportEntry({ sure_ui: ['table'], cssClasses: { row: 'sure-table__row' } })
     expect(templateCoverageGaps(sloppy)).toEqual(['buttons', 'form'])
+  })
+
+  it('the installed sure-ui publishes the document and figure blocks', () => {
+    expect(KNOWN.has('document')).toBe(true)
+    expect(KNOWN.has('figure')).toBe(true)
+  })
+
+  it("a document part's declared blocks all exist in the installed sure-ui", () => {
+    // reportEntry() declares document + figure alongside the template blocks.
+    expect(unpublishedBlocks(reportEntry(), KNOWN)).toEqual([])
+  })
+
+  it('the check fires for an unknown or unpublished block', () => {
+    const c = reportEntry({ sure_ui: ['table', 'document', 'figure', 'ghost-block'] })
+    expect(unpublishedBlocks(c, KNOWN)).toEqual(['document-table: ghost-block'])
+  })
+
+  it('the check still fires when only the document/figure blocks are missing upstream', () => {
+    // Guard against a regression where the installed sure-ui lags behind the
+    // declarations: an older COMPONENTS set must be rejected, not excused.
+    const older = new Set([...KNOWN].filter((b) => b !== 'document' && b !== 'figure'))
+    expect(unpublishedBlocks(reportEntry(), older)).toEqual([
+      'document-table: document',
+      'document-table: figure',
+    ])
   })
 
   it('any document part that lands in this catalog validates its extension keys', () => {

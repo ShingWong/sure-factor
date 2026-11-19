@@ -11,9 +11,10 @@ introduce dynamic evaluation of guard strings.
 **Do not weaken the class-coverage guard.** A report entry is a document part,
 not a form semantically, but the template generator emits a `sure-form` wrapper
 and a `btn-primary` submit for every component. Report entries must still
-declare `form` and `buttons` in `sure_ui`. The registry test cannot yet validate
-the unpublished `document`/`figure` blocks against the installed sure-ui; that
-check is a named TODO, not a reason to relax coverage.
+declare `form` and `buttons` in `sure_ui`. The registry test validates the
+`document`/`figure` blocks against the installed sure-ui (0.3.6+) via
+`unpublishedBlocks`; an unpublished block fails loudly, which is not a reason
+to relax coverage.
 
 ## Graphify
 
