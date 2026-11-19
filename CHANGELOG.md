@@ -217,3 +217,9 @@ and was wrong in the browser.
 ## [0.1.0]
 
 - Initial release.
+
+## [0.5.10] - 2026-11-19
+
+Republished 0.5.9, whose staged publish lapsed before approval (npm discards a
+staged package after seven days). The contents are identical.
+
