@@ -5,6 +5,25 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed — strict guard grammar (slated for 0.6.2; version not bumped here)
+
+- Guard validation now follows the closed scope grammar locked for
+  sure-document: `.field` / `row.field` / `rows.field` (row scope, requires an
+  active row context — `data.shape` `rows`/`series`), `@field` / `root.field`
+  (root scope), `totals.field` (server totals), raw numeric literals,
+  aggregates `sum:` / `sub:` / `mul:` / `div:` / `avg:` with comma-separated
+  operands (`rows.amount` is a valid array-range operand; `count` is a tolerated
+  legacy alias), and `ifpresent:Condition->Then`.
+- Removed the `P:` and `F:` forms. A bare identifier, an unknown namespace, or a
+  row-scoped token with no active row context now fails closed with the new
+  `SCOPE_INVALID` validation issue naming the offending token — sure-factor's
+  mirror of sure-document's `E_SCOPE_INVALID`. `UNKNOWN_PROJECTION`,
+  `GUARD_WITHOUT_PROJECTION`, `BAD_FAMILY`, `BAD_SHAPE` and `BAD_FIXTURE` are
+  unchanged.
+- The five published sure-store entries stay valid: their legacy `sum(...)`,
+  `count(...)` and `ifpresent(...)` call forms and `record.*` / `rows.*` bindings
+  are still accepted, and a test replays each entry's exact guards.
+
 ### Changed
 
 - Bumped `@shing.wong/sure-ui` to `^0.3.6` (publishes the `document` and
