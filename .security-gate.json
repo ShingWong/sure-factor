@@ -1,0 +1,20 @@
+{
+  "safeEmailDomains": [
+    "ejemplo.com",
+    "exemple.com"
+  ],
+  "allow": [
+    {
+      "file": "*",
+      "label": "Card number",
+      "match": "4111 1111 1111 1111",
+      "reason": "published synthetic test card in the type catalog"
+    },
+    {
+      "file": "*",
+      "label": "SSN",
+      "match": "123-45-6789",
+      "reason": "published synthetic test SSN in the type catalog"
+    }
+  ]
+}
