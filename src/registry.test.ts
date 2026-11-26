@@ -13,16 +13,16 @@
  *      styled markup nobody ships styles for — the exact class of silent
  *      breakage the old vendored themes hid.
  *
- * The template's own hardcoded classes are guarded too: every generated
- * template submits with `btn-primary`, and falls back to a `sure-form`
- * wrapper when the yaml declares no `form` class — so `buttons` is always
- * required, and `form` is required whenever cssClasses omits it.
+ * The form/table templates' hardcoded classes are guarded too: those
+ * templates submit with `btn-primary` and fall back to a `sure-form` wrapper
+ * when the yaml declares no `form` class — so `buttons` is always required,
+ * and `form` is required whenever cssClasses omits it.
  *
- * A report entry is a document part, not a form in the semantic sense — it
- * carries the `family`/`data`/`print`/`guards`/`fixture` extension — but the
- * generator still emits the same wrapper and submit button for it. The
- * class-coverage guards below therefore apply to report entries unchanged;
- * the tests at the bottom pin that intent.
+ * A report entry is a document part, not a form: the server template emits
+ * document/table or figure markup for it, with no form wrapper or submit. The
+ * published entries still declare `form`/`buttons`, so the declaration-level
+ * coverage guards below stay in force for them too — these tests pin that
+ * intent without weakening the check.
  *
  * Report entries declare the `document` and `figure` blocks, published in
  * sure-ui 0.3.6. The "declared block exists" check below runs against the
@@ -84,14 +84,14 @@ describe('catalog registry: sure_ui declares what the markup needs', () => {
   })
 
   it("the template's hardcoded submit button is covered everywhere", () => {
-    // generateTemplate always emits class="btn-primary"; a yaml that forgets
+    // Form/table templates emit class="btn-primary"; a yaml that forgets
     // `buttons` renders an unstyled submit.
     const missing = components.filter((c) => !(c.sure_ui ?? []).includes('buttons')).map((c) => c.name)
     expect(missing, `yamls whose submit button would be unstyled: ${missing.join(', ')}`).toEqual([])
   })
 
   it('the template\'s sure-form fallback wrapper is covered when cssClasses omits form', () => {
-    // generateTemplate emits <form class="…sure-form"> when cssClasses has no
+    // Form templates emit <form class="…sure-form"> when cssClasses has no
     // `form` key — that yaml must ship the form block to style its wrapper.
     const missing = components
       .filter((c) => !(c.cssClasses?.form) && !(c.sure_ui ?? []).includes('form'))

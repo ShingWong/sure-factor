@@ -84,10 +84,10 @@ export interface CatalogComponent {
 
   // ── document-part extension (catalog schema 0.6) ──────────────────────────
   // A report entry is a document part, not a form. It still declares `form`
-  // and `buttons` in `sure_ui`: the template generator emits a form wrapper
-  // and a submit button for every component, and the registry test enforces
-  // that coverage. These keys add document semantics; they do not exempt an
-  // entry from the template's class contract.
+  // and `buttons` in `sure_ui` — the registry coverage guard checks those
+  // declarations — but the server template emits document/table or figure
+  // markup for it, never a `sure-form` wrapper or a submit button. These keys
+  // add document semantics and are validated by `src/catalog.ts`.
   family?: ComponentFamily
   data?: ComponentData
   print?: ComponentPrint
