@@ -223,6 +223,29 @@ security:
 | `crud-resource` | Full CRUD with table + modal | inline, toast, statusBar, sidePanel | `.sure-crud__*` |
 | `search-filter` | Search with filter controls | inline, toast | `.sure-search__*` |
 
+### One resource per generation
+
+`generateForTier` generates **one table per call**. For a multi-table schema,
+pass `tableName` (or its `resource` alias) and call it once per table:
+
+```ts
+for (const table of schema.tables) {
+  const output = generateForTier(schema, {
+    tier: 'production', component: 'form', tableName: table.tableName,
+  })
+}
+```
+
+Fields, routes, i18n, validation and sanitisation are all scoped to that table;
+unrelated tables are never flattened into one form. When the option is omitted
+the first table in the schema is used — the table the routes already targeted —
+so single-table callers are unchanged. An unknown table name fails loudly.
+
+Template shape follows the catalog entry: form components keep the htmx/express
+`<form>` with `hx-post`, `data-table` emits a real `<table>` (`thead`/`tbody`,
+`.sure-table__*` cells bound to `{{#each rows}}`), and document parts emit their
+own markup. Class names always come from the entry's `cssClasses`.
+
 ### Document parts (report entries)
 
 A catalog entry may describe a **document part** instead of a form. Five optional
@@ -270,13 +293,20 @@ sure-document's `E_SCOPE_INVALID`. **A guard that references an undeclared
 projection still fails loudly** with `UNKNOWN_PROJECTION`, naming the guard and
 the missing name.
 
-A report entry is a document part semantically, **not** a form — but the
-template generator still emits a form wrapper and a submit button for every
-component. Report entries therefore keep declaring `form` and `buttons` in
-`sure_ui`; the registry test enforces this and the guard was not weakened.
-The `document` and `figure` blocks **ship in sure-ui from 0.3.6**, and the
-installed dependency is `^0.3.6` — the remaining gap is in this generator's
-report emission, not in sure-ui's styles.
+A report entry is a document part semantically, **not** a form. Pass its
+catalog definition through `GenerateOptions.componentDefinition` (the report
+YAML lives in `sure-store/components/`, not this package's catalog), and
+`generateForTier` emits the part directly: a sure-ui `document` section around
+the declared projection — a table with its `sure-table__*` cells, or a figure
+for family `figure`. There is **no `<form>`, no `sure-form` wrapper and no
+`btn-primary` submit** in that output.
+
+The report's guard/projection contract is unchanged: `validateDocumentPart`
+and `assertValidDocumentPart` still fail loudly for an invalid guard, and the
+registry's `unpublishedBlocks` and class-coverage guards still check declared
+blocks (including `form`/`buttons` on the published entries) against sure-ui's
+`COMPONENTS`. None of those guards was weakened. `document` and `figure` blocks
+ship in sure-ui from 0.3.6, so the styles are available to `compose()`.
 
 ## Tiers
 
@@ -432,9 +462,9 @@ git clone git@github.com:ShingWong/sure-factor.git
 cd sure-factor
 npm install
 npm run build
-npm test                 # 176 tests (173 unit + 3 Playwright render)
-npm run test:unit        # 173, no browser required
-npm run test:e2e         # 3, needs `npx playwright install chromium`
+npm test                 # 378 tests (374 unit + 4 Playwright render)
+npm run test:unit        # 374, no browser required
+npm run test:e2e         # 4, needs `npx playwright install chromium`
 npm run lint             # tsc --noEmit, includes test files
 npm run verify           # lint + build + test + export check (what CI runs)
 ```

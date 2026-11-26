@@ -6,6 +6,7 @@ import type { CatalogType, CatalogComponent } from './types.js'
 import { matchColumnToTypeSync, loadAllTypesSync } from './match.js'
 import { parseYaml } from './parse-yaml.js'
 import { objectBody, sanitizeStepLiteral, toRegexLiteral, uniqueKey } from './generate-internal.js'
+import { assertValidDocumentPart, isDocumentPart } from './catalog.js'
 import { compose, type ComponentName } from '@shing.wong/sure-ui'
 
 export type GenerationTier = 'vibe' | 'prototype' | 'production'
@@ -15,6 +16,25 @@ export interface GenerateOptions {
   component: string
   locale?: string
   theme?: string
+  /**
+   * The one table this call generates. Fields, routes, i18n, validation and
+   * sanitisation are all scoped to it — a multi-table schema is generated one
+   * resource per call, never merged into a single form or table.
+   *
+   * Omitted: the first table in the schema is used (the table the routes have
+   * always targeted). Existing single-table callers therefore keep working;
+   * a multi-table caller must pass this option once per table. `resource` is
+   * accepted as an alias for callers that speak in terms of a resource.
+   */
+  tableName?: string
+  resource?: string
+  /**
+   * A caller-supplied catalog definition, e.g. a report entry parsed from
+   * sure-store/components/*.yaml. When absent, `component` is loaded from
+   * this package's catalog. Document parts can only be generated through this
+   * option because sure-store owns their YAML, not sure-factor.
+   */
+  componentDefinition?: CatalogComponent
 }
 
 export interface GeneratedOutput {
@@ -36,19 +56,23 @@ export interface GeneratedOutput {
 }
 
 export function generateForTier(schema: SchemaInfo, options: GenerateOptions): GeneratedOutput {
-  const { tier, component: componentName } = options
+  const { tier } = options
 
-  const component = loadComponent(componentName)
+  const component = options.componentDefinition ?? loadComponent(options.component)
   if (!component) {
-    throw new Error(`Component "${componentName}" not found in catalog`)
+    throw new Error(`Component "${options.component}" not found in catalog`)
   }
+  // Document parts carry their own validation; an invalid guard must fail
+  // here too, rather than being emitted as markup nobody can verify.
+  if (isDocumentPart(component)) assertValidDocumentPart(component)
 
+  const tableName = resolveTableName(schema, options)
   const allTypes = loadAllTypesSync()
-  // Keep the owning table on each field. Without it, two tables that both
-  // have `updated_at` collide into one object key and silently drop a
-  // validator.
-  const fields: Array<{ table: string; column: ColumnInfo; type: CatalogType }> = []
+  // One resource per call. Keeping the owning table on each field still
+  // matters: a repeated column name must not collide with another entry.
+  const fields: ScopedField[] = []
   for (const table of schema.tables) {
+    if (table.tableName !== tableName) continue
     for (const column of table.columns) {
       const matched = matchColumnToTypeSync(column, allTypes, tier)
       if (matched) {
@@ -85,8 +109,8 @@ export function generateForTier(schema: SchemaInfo, options: GenerateOptions): G
   }
 
   return {
-    routes: generateRoutes(schema, fields),
-    template: generateTemplate(component, fields, options),
+    routes: generateRoutes(fields, tableName),
+    template: generateTemplate(component, fields, options, tableName),
     i18n: generateI18n(fields, options.locale ?? 'en'),
     styles: generateStyles(component, options.theme ?? 'nord'),
     scripts: resolveComponentScripts(component),
@@ -106,8 +130,27 @@ function loadComponent(name: string): CatalogComponent | null {
   }
 }
 
-function generateRoutes(schema: SchemaInfo, fields: Array<{ table: string; column: ColumnInfo; type: CatalogType }>): string {
-  const tableName = schema.tables[0]?.tableName ?? 'resource'
+/**
+ * Resolve the single resource this call generates. Defaulting to the first
+ * table keeps the historical behaviour for the common (single-table) call;
+ * a multi-table caller must name its table explicitly instead of receiving
+ * every table flattened into one form.
+ */
+function resolveTableName(schema: SchemaInfo, options: GenerateOptions): string {
+  const { tableName, resource } = options
+  if (tableName !== undefined && resource !== undefined && tableName !== resource) {
+    throw new Error(`Conflicting resource selection: tableName="${tableName}" but resource="${resource}"`)
+  }
+  const name = tableName ?? resource ?? schema.tables[0]?.tableName
+  if (name === undefined) return 'resource' // empty schema: keep the old placeholder
+  if (!schema.tables.some((t) => t.tableName === name)) {
+    const available = schema.tables.map((t) => t.tableName).join(', ') || '(none)'
+    throw new Error(`Table "${name}" not found in schema; available tables: ${available}`)
+  }
+  return name
+}
+
+function generateRoutes(fields: ScopedField[], tableName: string): string {
   const tableFields = fields.filter(f => f.table === tableName)
 
   // Build the zod schema inline so the module that validates a payload is the
@@ -188,13 +231,35 @@ function safeHandlebarKey(value: string): string {
   return value
 }
 
-function generateTemplate(component: CatalogComponent, fields: Array<{ table: string; column: ColumnInfo; type: CatalogType }>, options: GenerateOptions): string {
+/** A column matched to a catalog type, scoped to one table (the resource). */
+type ScopedField = { table: string; column: ColumnInfo; type: CatalogType }
+
+/**
+ * Dispatch on what the catalog entry actually is. A report entry is a
+ * document part, not a form; a data-table gets a real table. Everything else
+ * keeps the htmx/express form contract. All three paths render the same
+ * single resource.
+ */
+function generateTemplate(component: CatalogComponent, fields: ScopedField[], options: GenerateOptions, tableName: string): string {
+  if (isDocumentPart(component)) return generateDocumentTemplate(component, fields, tableName)
+  if (isTableComponent(component)) return generateTableTemplate(component, fields, tableName)
+  return generateFormTemplate(component, fields)
+}
+
+/** True when the catalog entry declares the BEM roles of a table. Mirrors the
+ *  client target's test so both targets classify the same components alike. */
+function isTableComponent(component: CatalogComponent): boolean {
   const cc = component.cssClasses ?? {}
-  const fClass = cc.field ?? 'field'
-  const lClass = cc.label ?? 'field-label'
-  const iClass = cc.input ?? 'field-input'
-  const eClass = cc.error ?? 'field-error'
-  const hClass = cc.help ?? 'field-help'
+  return typeof cc.row === 'string' || typeof cc.cell === 'string' || typeof cc.header === 'string'
+}
+
+function generateFormTemplate(component: CatalogComponent, fields: ScopedField[]): string {
+  const cc = component.cssClasses ?? {}
+  const fClass = htmlAttr(cc.field ?? 'field')
+  const lClass = htmlAttr(cc.label ?? 'field-label')
+  const iClass = htmlAttr(cc.input ?? 'field-input')
+  const eClass = htmlAttr(cc.error ?? 'field-error')
+  const hClass = htmlAttr(cc.help ?? 'field-help')
 
   const fieldHtml = fields.map(({ column, type }) => {
     const safeName = safeHandlebarKey(column.columnName)
@@ -211,13 +276,13 @@ function generateTemplate(component: CatalogComponent, fields: Array<{ table: st
       ? `type="checkbox" id="${attrName}" name="${attrName}" class="${iClass}"`
       : `type="${inputType}" id="${attrName}" name="${attrName}" class="${iClass}" placeholder="${placeholder}" value="{{values.${safeName}}}"`
     return `
-  <div class="${htmlAttr(fClass)}">
-    <label class="${htmlAttr(lClass)}" for="${attrName}">${label}</label>
+  <div class="${fClass}">
+    <label class="${lClass}" for="${attrName}">${label}</label>
     <input ${inputAttrs} />
     {{#if errors.${safeName}}}
-      <span class="${htmlAttr(eClass)}" role="alert">${errorKey}</span>
+      <span class="${eClass}" role="alert">${errorKey}</span>
     {{else}}
-      <span class="${htmlAttr(hClass)}">${help}</span>
+      <span class="${hClass}">${help}</span>
     {{/if}}
   </div>`
   }).join('\n')
@@ -231,7 +296,122 @@ function generateTemplate(component: CatalogComponent, fields: Array<{ table: st
 `.trim()
 }
 
-function generateI18n(fields: Array<{ table: string; column: ColumnInfo; type: CatalogType }>, locale: string): Record<string, string> {
+/**
+ * The server-side data-table: real `<table>` markup, never a form of inputs.
+ * Headers come from the matched columns of the one resource; rows come from
+ * the handler's `rows` collection. Classes come from the catalog's cssClasses
+ * (the sure-ui BEM names) and fall back to the sure-ui table roles.
+ */
+function generateTableTemplate(component: CatalogComponent, fields: ScopedField[], tableName: string): string {
+  const cc = component.cssClasses ?? {}
+  const tableClass = htmlAttr(cc.form ?? 'sure-table')
+  const headerClass = htmlAttr(cc.header ?? cc.label ?? 'sure-table__header')
+  const cellClass = htmlAttr(cc.cell ?? cc.field ?? 'sure-table__cell')
+  const rowClass = htmlAttr(cc.row ?? 'sure-table__row')
+  const emptyClass = htmlAttr(cc.error ?? 'sure-table__error')
+
+  const headers = fields.map(({ type }) =>
+    `      <th class="${headerClass}" scope="col">{{i18n &quot;types.${htmlAttr(type.name)}.label&quot;}}</th>`,
+  ).join('\n') || `      <!-- no catalog-matched columns for ${htmlAttr(tableName)} -->`
+  const cells = fields.map(({ column }) =>
+    `        <td class="${cellClass}">{{this.${safeHandlebarKey(column.columnName)}}}</td>`,
+  ).join('\n')
+
+  return `
+<table class="${tableClass}" data-resource="${htmlAttr(tableName)}">
+  <thead>
+    <tr>
+${headers}
+    </tr>
+  </thead>
+  <tbody>
+    {{#each rows}}
+    <tr class="${rowClass}">
+${cells}
+    </tr>
+    {{else}}
+    <tr><td class="${emptyClass}" colspan="${fields.length || 1}" role="status">{{i18n &quot;components.${htmlAttr(component.name)}.emptyLabel&quot;}}</td></tr>
+    {{/each}}
+  </tbody>
+</table>
+`.trim()
+}
+
+/**
+ * A document part is emitted as its own markup: a sure-ui document section
+ * wrapping either a figure (family `figure`) or a table of the declared
+ * projection. No `<form>`, no submit button — and no `sure-form` class. The
+ * report's guard/projection contract stays with `generateReportModule`; here
+ * the projection is the set of columns the markup may bind.
+ */
+function generateDocumentTemplate(component: CatalogComponent, fields: ScopedField[], tableName: string): string {
+  // Keep the guard local too: a direct call to the dispatcher cannot bypass
+  // the document-part validation applied in generateForTier.
+  assertValidDocumentPart(component)
+  const cc = component.cssClasses ?? {}
+  const family = component.family ?? 'structure'
+  const shape = component.data?.shape ?? 'none'
+  const projection = component.data?.projection ?? []
+  const names = (projection.length > 0 ? projection : fields.map(f => f.column.columnName)).map(safeHandlebarKey)
+  const rows = shape === 'rows' || shape === 'series'
+  const binding = rows ? 'this' : 'record'
+  const sectionClass = [
+    'sure-document__section',
+    component.print?.breakBefore ? 'sure-document__section--break-before' : '',
+  ].filter(Boolean).join(' ')
+  const attrs = [
+    `data-document-part="${htmlAttr(component.name)}"`,
+    `data-family="${htmlAttr(family)}"`,
+    `data-shape="${htmlAttr(shape)}"`,
+    `data-resource="${htmlAttr(tableName)}"`,
+    `data-projection="${htmlAttr(projection.join(' '))}"`,
+  ].join(' ')
+
+  let body: string
+  if (family === 'figure') {
+    const graphicClass = htmlAttr(cc.graphic ?? 'sure-document__graphic')
+    const plotClass = htmlAttr(cc.plot ?? 'sure-figure__plot')
+    const caption = names[0] ? `{{${binding}.${names[0]}}}` : ''
+    body = `<figure class="sure-figure">
+    <div class="${graphicClass}"><div class="${plotClass}">{{{figure}}}</div></div>
+    <figcaption class="sure-figure__legend">${caption}</figcaption>
+  </figure>`
+  } else {
+    const tableClass = [cc.table ?? 'sure-table', cc.print, cc.total]
+      .filter((value): value is string => typeof value === 'string' && value !== '')
+      .map((value) => htmlAttr(value)).join(' ')
+    const headerClass = htmlAttr(cc.header ?? 'sure-table__header')
+    const cellClass = htmlAttr(cc.cell ?? 'sure-table__cell')
+    const rowClass = htmlAttr(cc.row ?? 'sure-table__row')
+    const headers = names.map((name) =>
+      `        <th class="${headerClass}" scope="col">${htmlAttr(name.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()))}</th>`,
+    ).join('\n')
+    const cells = names.map((name) =>
+      `        <td class="${cellClass}">{{${binding}.${name}}}</td>`,
+    ).join('\n')
+    const row = `      <tr class="${rowClass}">\n${cells}\n      </tr>`
+    // A row shape iterates the rows collection; a record shape reads the
+    // single record from the handler's context. No #with here: the binding
+    // prefix already names the scope.
+    const tbody = rows ? `    {{#each rows}}\n${row}\n    {{/each}}` : row
+    body = `<table class="${tableClass}">
+      <thead>
+        <tr>
+${headers}
+        </tr>
+      </thead>
+      <tbody>
+${tbody}
+      </tbody>
+    </table>`
+  }
+
+  return `<section class="sure-document ${sectionClass}" ${attrs}>
+  ${body}
+</section>`
+}
+
+function generateI18n(fields: ScopedField[], locale: string): Record<string, string> {
   const result: Record<string, string> = {}
   for (const { type } of fields) {
     const hints = type.hints?.[locale]

@@ -95,13 +95,17 @@ describe('generateForTier: validation is parseable', () => {
     expect(dupes, `duplicate keys: ${[...new Set(dupes)].join(', ')}`).toEqual([])
   })
 
-  it('qualifies colliding column names by table so no validator is lost', () => {
-    const { validation } = generate(MULTI_TABLE_DDL)
-    // `email` exists in three tables; each occurrence must survive. (`updated_at`
-    // is no longer a validator case: a TIMESTAMPTZ is not a catalogue type, so
-    // it correctly falls back to an unvalidated text field.)
-    const email = validation.split('\n').filter((l) => l.includes('email'))
-    expect(email.length, 'a validator was silently dropped for a repeated column name').toBeGreaterThanOrEqual(3)
+  it('keeps every colliding column by generating one resource per table', () => {
+    // `email` exists in three tables. The server target no longer merges all
+    // three into one object; callers generate each table explicitly, and each
+    // call keeps its own validator. (A TIMESTAMPTZ is not a catalogue type, so
+    // `updated_at` correctly falls back to an unvalidated text field.)
+    const tables = ['persons', 'emails', 'person_roles']
+    for (const tableName of tables) {
+      const { validation } = generate(MULTI_TABLE_DDL, { tableName })
+      const email = validation.split('\n').filter((l) => /"email"\s*:/.test(l))
+      expect(email.length, `${tableName}: validator for the repeated column was dropped`).toBe(1)
+    }
   })
 
   it('keeps sanitization parseable too', () => {
