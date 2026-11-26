@@ -13,8 +13,8 @@ permissions:
 
 jobs:
   gate:
-    uses: ShingWong/sure-ci-gate/.github/workflows/security-gate.yml@ddce68a72779cafa951db710668846737cd49aaa
+    uses: ShingWong/sure-ci-gate/.github/workflows/security-gate.yml@1b7c7b0f2ef2319d6833721f537419565acacfd8
     with:
-      gate-ref: ddce68a72779cafa951db710668846737cd49aaa
+      gate-ref: 1b7c7b0f2ef2319d6833721f537419565acacfd8
     secrets:
       denylist-token: ${{ secrets.SURE_SECURITY_TOKEN }}
