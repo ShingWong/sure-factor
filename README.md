@@ -274,8 +274,9 @@ A report entry is a document part semantically, **not** a form — but the
 template generator still emits a form wrapper and a submit button for every
 component. Report entries therefore keep declaring `form` and `buttons` in
 `sure_ui`; the registry test enforces this and the guard was not weakened.
-Styling the new `document` and `figure` blocks is deferred until sure-ui
-publishes them (the installed version has neither).
+The `document` and `figure` blocks **ship in sure-ui from 0.3.6**, and the
+installed dependency is `^0.3.6` — the remaining gap is in this generator's
+report emission, not in sure-ui's styles.
 
 ## Tiers
 
