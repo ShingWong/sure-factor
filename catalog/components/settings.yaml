@@ -1,0 +1,74 @@
+name: settings
+description: Sectioned settings dialog — a sure-ui menu of sections beside one panel at a time. Skins re-lay the same classes as a rail, tab strip, category tree or segmented sheet.
+tier: production
+parameters:
+    sections:
+      type: text
+      required: true
+      description: Comma-separated section ids, e.g. appearance,accounts,retention,updates
+    title:
+      type: text
+      required: false
+      default: Settings
+    showClose:
+      type: boolean
+      required: false
+      default: true
+behavior:
+    notificationModes:
+      - inline
+      - statusBar
+    audio:
+      errorBell: false
+      successChime: false
+    voiceHelp: false
+    autoFocus: true
+sure_ui:
+    - settings
+    - dialog
+    - menu
+    - form
+    - crud
+    - buttons
+cssClasses:
+    overlay: sure-dialog-overlay
+    dialog: sure-dialog
+    header: sure-dialog__header
+    title: sure-dialog__title
+    close: sure-dialog__close
+    body: sure-dialog__body
+    nav: sure-settings__nav
+    tab: sure-settings__tab
+    panels: sure-settings__body
+    panel: sure-settings__panel
+    list: sure-settings__list
+    actions: sure-settings__actions
+    status: sure-settings__status
+    result: sure-settings__result
+generated:
+    html: |
+      <div class="sure-dialog-overlay" id="{{id}}-overlay" role="dialog" aria-modal="true">
+        <div class="sure-dialog">
+          <header class="sure-dialog__header">
+            <span class="sure-dialog__title">{{title}}</span>
+            <button class="sure-dialog__close" aria-label="Close settings">Close</button>
+          </header>
+          <div class="sure-dialog__body">
+            <div class="sure-menu sure-settings__nav" role="tablist">
+              {{#sections}}<button class="sure-menu__item sure-settings__tab" role="tab">{{.}}</button>{{/sections}}
+            </div>
+            <div class="sure-settings__body">
+              {{#sections}}<section class="sure-crud sure-settings__panel" role="tabpanel">{{.}}</section>{{/sections}}
+            </div>
+          </div>
+        </div>
+      </div>
+    js: >
+      function open{{Name}}() { document.getElementById('{{id}}-overlay').hidden = false }
+    css: >
+      /* Styling comes from sure-ui's `settings`, `dialog`, `menu`, `form` and
+         `crud` families; skins only re-lay sure-settings__nav and __body. */
+example:
+    usage: Generate a four-section settings dialog for a mail client.
+    code: |
+      openSettings()
